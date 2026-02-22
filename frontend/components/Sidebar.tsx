@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, MessageSquare, Briefcase, Settings, Plus, Trash2 } from 'lucide-react';
+import { LayoutGrid, MessageSquare, Briefcase, Settings, Plus, Trash2, Box } from 'lucide-react';
 
 interface Conversation {
     id: string;
@@ -13,6 +13,9 @@ interface SidebarProps {
     onSelect: (id: string) => void;
     onNew: () => void;
     onDelete: (id: string, e: React.MouseEvent) => void;
+    onPluginsClick: () => void;
+    onChatsClick: () => void;
+    activeTab: 'chats' | 'plugins';
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,7 +23,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     currentId,
     onSelect,
     onNew,
-    onDelete
+    onDelete,
+    onPluginsClick,
+    onChatsClick,
+    activeTab
 }) => {
     return (
         <div className="w-64 flex-shrink-0 flex flex-col h-full bg-brand-surface border-r border-white/5 text-white font-sans p-4">
@@ -40,9 +46,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <Briefcase className="w-4 h-4" />
                     <span className="text-sm font-medium">My projects</span>
                 </div>
-                <div className="flex items-center gap-3 px-3 py-2 text-brand-accent bg-brand-accent/10 rounded cursor-pointer">
+                <div
+                    onClick={onChatsClick}
+                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer rounded transition-colors ${activeTab === 'chats' ? 'text-brand-accent bg-brand-accent/10' : 'text-brand-grey hover:text-white hover:bg-white/5'}`}
+                >
                     <MessageSquare className="w-4 h-4" />
                     <span className="text-sm font-medium">Chats</span>
+                </div>
+                <div
+                    onClick={onPluginsClick}
+                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer rounded transition-colors ${activeTab === 'plugins' ? 'text-brand-accent bg-brand-accent/10' : 'text-brand-grey hover:text-white hover:bg-white/5'}`}
+                >
+                    <Box className="w-4 h-4" />
+                    <span className="text-sm font-medium">Plugins</span>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2 text-brand-grey hover:text-white transition-colors cursor-pointer rounded hover:bg-white/5">
                     <LayoutGrid className="w-4 h-4" />

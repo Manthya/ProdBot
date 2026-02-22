@@ -1,0 +1,39 @@
+# Walkthrough - Plugin Model Addition & Verification
+
+I have successfully updated the plugin feature to allow dynamic model addition with automated verification. The entire flow has been tested and verified end-to-end.
+
+## Changes Made
+
+### Universal Test Script
+- Created [test_model_integration.py](file:///Users/mk/Documents/chatbot-ai-systems-production/scripts/test_model_integration.py) to verify model connectivity and tool calling capabilities.
+- Fixed a bug in tool formatting ([to_ollama_format](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/tools/base.py#14-24)) that was causing verification failures for models with tools.
+
+### Backend Infrastructure
+- Updated [schemas.py](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/models/schemas.py) and [settings_manager.py](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/config/settings_manager.py) to support dynamic configuration of LLM providers.
+- Implemented `/api/plugins/add-model` in [routes.py](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/server/routes.py).
+
+### Frontend Dashboard
+- Redesigned [PluginsDashboard.tsx](file:///Users/mk/Documents/chatbot-ai-systems-production/frontend/components/PluginsDashboard.tsx):
+    - **Refined Alignment**: Moved "Add New Model" to the Active Model area for better visibility.
+    - **Multi-step Modal**: Type selection -> Configuration -> Real-time Verification.
+
+## Verification Results
+
+### Live Test: Adding `llama3.2:latest`
+I used a browser agent to test the feature by adding a new open-source model.
+
+````carousel
+![Add Model Flow - Step 1](/Users/mk/.gemini/antigravity/brain/6f03f63a-b698-4a45-a63b-0c18d08a3295/.system_generated/click_feedback/click_feedback_1771742176821.png)
+<!-- slide -->
+![Add Model Flow - Configuration](/Users/mk/.gemini/antigravity/brain/6f03f63a-b698-4a45-a63b-0c18d08a3295/.system_generated/click_feedback/click_feedback_1771742193694.png)
+<!-- slide -->
+![Add Model Flow - Verification Success](/Users/mk/.gemini/antigravity/brain/6f03f63a-b698-4a45-a63b-0c18d08a3295/.system_generated/click_feedback/click_feedback_1771742212114.png)
+````
+
+### Full Flow Recording
+The following recording shows the successful addition, verification, and activation of the `llama3.2:latest` model via the Plugins dashboard.
+
+![Successful Model Addition Flow](/Users/mk/.gemini/antigravity/brain/6f03f63a-b698-4a45-a63b-0c18d08a3295/test_add_model_flow_final_attempt_1771742147520.webp)
+
+> [!TIP]
+> The system now automatically verifies that your new model supports the core capabilities (connectivity and tools) before allowing it to be activated, preventing system downtime due to misconfiguration.

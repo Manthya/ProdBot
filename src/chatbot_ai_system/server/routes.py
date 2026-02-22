@@ -26,6 +26,7 @@ from chatbot_ai_system.providers.factory import ProviderFactory
 from chatbot_ai_system.repositories.conversation import ConversationRepository
 from chatbot_ai_system.repositories.memory import MemoryRepository
 from chatbot_ai_system.tools import registry
+from chatbot_ai_system.config.settings_manager import settings_manager
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,13 @@ router = APIRouter()
 def get_provider(name: str = "ollama") -> BaseLLMProvider:
     """Get or create a provider instance."""
     return ProviderFactory.get_provider(name)
+
+
+async def get_active_model_and_provider(settings) -> tuple:
+    """Get the dynamically-set model and provider, falling back to static config."""
+    active_model = await settings_manager.get_setting("ollama_model") or settings.ollama_model
+    active_provider = await settings_manager.get_setting("default_llm_provider") or settings.default_llm_provider
+    return active_model, active_provider
 
 
 # Helper to simulate auth
@@ -85,7 +93,8 @@ async def health_check():
 async def chat_completion(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     """Generate a chat completion."""
     settings = get_settings()
-    provider_name = request.provider or settings.default_llm_provider
+    active_model, active_provider = await get_active_model_and_provider(settings)
+    provider_name = request.provider or active_provider
     user_id = get_current_user_id()
 
     # Ensure user exists (temporary hack until Auth phase)
@@ -167,7 +176,7 @@ async def chat_completion(request: ChatRequest, db: AsyncSession = Depends(get_d
             conversation_id=str(conversation_id),
             user_input=last_msg.content,
             conversation_history=history,
-            model=request.model or settings.ollama_model,
+            model=request.model or active_model,
             temperature=request.temperature,
             max_tokens=request.max_tokens or 1000,
             user_id=str(user_id),
@@ -193,7 +202,7 @@ async def chat_completion(request: ChatRequest, db: AsyncSession = Depends(get_d
         return ChatResponse(
             message=response_msg,
             usage=None,
-            model=request.model or settings.default_llm_provider,
+            model=request.model or active_model,
             provider=provider_name,
             conversation_id=str(conversation_id),
         )
@@ -313,7 +322,8 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
                     )
                 continue
 
-            provider_name = request.provider or settings.default_llm_provider
+            active_model, active_provider = await get_active_model_and_provider(settings)
+            provider_name = request.provider or active_provider
             try:
                 provider = get_provider(provider_name)
             except ValueError as e:
@@ -384,7 +394,7 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
                     conversation_id=str(conversation_id),
                     user_input=user_query,
                     conversation_history=history,
-                    model=request.model or settings.ollama_model,
+                    model=request.model or active_model,
                     temperature=request.temperature,
                     max_tokens=request.max_tokens or 1000,
                     user_id=str(user_id),

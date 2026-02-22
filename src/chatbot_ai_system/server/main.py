@@ -11,6 +11,7 @@ from chatbot_ai_system.config import get_settings
 from chatbot_ai_system.database.redis import redis_client
 
 from .multimodal_routes import router as multimodal_router
+from .plugin_routes import router as plugin_router
 from .routes import router
 
 # Configure logging
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     # Include routes
     app.include_router(router)
     app.include_router(multimodal_router)  # Phase 5.0: Upload, Voice
+    app.include_router(plugin_router)  # Plugin management
 
     # Initialize Prometheus Instrumentation
     Instrumentator().instrument(app).expose(app)
@@ -66,7 +68,7 @@ def create_app() -> FastAPI:
         from chatbot_ai_system.tools.mcp_client import MCPClient
 
         # Load MCP servers from configuration
-        servers = get_mcp_servers()
+        servers = await get_mcp_servers()
         logger.info(f"Loading {len(servers)} MCP servers...")
 
         for server_config in servers:

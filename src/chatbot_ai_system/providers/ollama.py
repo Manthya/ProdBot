@@ -22,6 +22,7 @@ from chatbot_ai_system.observability.metrics import (
     LLM_TOKENS_TOTAL,
     LLM_TTFT_SECONDS,
 )
+from chatbot_ai_system.config.settings_manager import settings_manager
 
 from .base import BaseLLMProvider
 
@@ -200,6 +201,8 @@ class OllamaProvider(BaseLLMProvider):
         """Generate a completion using Ollama."""
         start_time = time.time()
         client = await self._get_client()
+        if model is None:
+            model = await settings_manager.get_setting("ollama_model")
         model = model or self.default_model
 
         payload = {
@@ -304,6 +307,8 @@ class OllamaProvider(BaseLLMProvider):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream a completion using Ollama."""
+        if model is None:
+            model = await settings_manager.get_setting("ollama_model")
         model = model or self.default_model
         url = f"{self.base_url}/api/chat"
 

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatArea, Message } from '@/components/ChatArea'
 import { InputBar } from '@/components/InputBar'
+import { PluginsDashboard } from '@/components/PluginsDashboard'
 import { useVoice } from '@/hooks/useVoice'
 import { useUpload, UploadResult } from '@/hooks/useUpload'
 import { Loader2 } from 'lucide-react'
@@ -25,6 +26,7 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(false)
     const [statusMessage, setStatusMessage] = useState<string>('')
     const [pendingAttachments, setPendingAttachments] = useState<UploadResult[]>([])
+    const [activeTab, setActiveTab] = useState<'chats' | 'plugins'>('chats')
 
     // Hooks
     const { uploadFile, isUploading } = useUpload()
@@ -68,6 +70,7 @@ export default function Home() {
                 const data = await res.json()
                 setMessages(data) // Backend returns array of messages
                 setConversationId(id)
+                setActiveTab('chats')
             }
         } catch (err) {
             console.error('Failed to load conversation', err)
@@ -219,29 +222,38 @@ export default function Home() {
                 conversations={conversations}
                 currentId={conversationId || ''}
                 onSelect={loadConversation}
-                onNew={startNewChat}
+                onNew={() => { startNewChat(); setActiveTab('chats'); }}
                 onDelete={deleteConversation}
+                onPluginsClick={() => setActiveTab('plugins')}
+                onChatsClick={() => setActiveTab('chats')}
+                activeTab={activeTab}
             />
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 relative">
-                <ChatArea messages={messages} isLoading={isLoading} statusMessage={statusMessage} />
+                {activeTab === 'chats' ? (
+                    <>
+                        <ChatArea messages={messages} isLoading={isLoading} statusMessage={statusMessage} />
 
-                {/* Input Area */}
-                <div className="p-4 bg-transparent">
-                    {pendingAttachments.length > 0 && (
-                        <div className="text-xs text-brand-pink mb-2 px-4 font-bold">
-                            {pendingAttachments.length} file(s) attached
+                        {/* Input Area */}
+                        <div className="p-4 bg-transparent">
+                            {pendingAttachments.length > 0 && (
+                                <div className="text-xs text-brand-pink mb-2 px-4 font-bold">
+                                    {pendingAttachments.length} file(s) attached
+                                </div>
+                            )}
+                            <InputBar
+                                onSend={sendMessage}
+                                onUpload={handleUpload}
+                                onVoiceToggle={toggleVoice}
+                                isRecording={isRecording}
+                                isLoading={isLoading || isUploading}
+                            />
                         </div>
-                    )}
-                    <InputBar
-                        onSend={sendMessage}
-                        onUpload={handleUpload}
-                        onVoiceToggle={toggleVoice}
-                        isRecording={isRecording}
-                        isLoading={isLoading || isUploading}
-                    />
-                </div>
+                    </>
+                ) : (
+                    <PluginsDashboard />
+                )}
             </div>
         </div>
     )

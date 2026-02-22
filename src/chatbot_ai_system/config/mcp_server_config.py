@@ -1,5 +1,6 @@
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+from chatbot_ai_system.config.settings_manager import settings_manager
 
 
 class MCPServerConfig:
@@ -20,7 +21,16 @@ class MCPServerConfig:
         self.required_env_vars = required_env_vars or []
 
 
-def get_mcp_servers() -> List[MCPServerConfig]:
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "command": self.command,
+            "args": self.args,
+            "env_vars": self.env_vars,
+            "required_env_vars": self.required_env_vars
+        }
+
+async def get_mcp_servers() -> List[MCPServerConfig]:
     """
     Get the list of configured MCP servers.
     Checks environment variables to enable/disable servers.
@@ -197,5 +207,23 @@ def get_mcp_servers() -> List[MCPServerConfig]:
                 required_env_vars=["SENTRY_AUTH_TOKEN"],
             )
         )
+
+    # --- User Dynamic Configs ---
+    dynamic_configs = await settings_manager.get_setting("mcp_servers")
+    if dynamic_configs and isinstance(dynamic_configs, list):
+        for cfg in dynamic_configs:
+            # Avoid duplicates if name matches built-ins
+            if any(s.name == cfg.get("name") for s in servers):
+                continue
+            
+            servers.append(
+                MCPServerConfig(
+                    name=cfg["name"],
+                    command=cfg["command"],
+                    args=cfg["args"],
+                    env_vars=cfg.get("env_vars"),
+                    required_env_vars=cfg.get("required_env_vars")
+                )
+            )
 
     return servers
