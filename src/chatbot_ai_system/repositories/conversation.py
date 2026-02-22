@@ -1,11 +1,14 @@
+import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text as sa_text
 from sqlalchemy.orm import selectinload
 
 from chatbot_ai_system.database.models import Conversation, Message
 from chatbot_ai_system.repositories.base import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationRepository(BaseRepository[Conversation]):
@@ -107,6 +110,11 @@ class ConversationRepository(BaseRepository[Conversation]):
 
     async def update_message_embedding(self, message_id: UUID, embedding: List[float]) -> None:
         """Update a message with its vector embedding."""
+        # Safety check: Avoid writing vector data to a potentially non-vector column
+        if not await self._check_vector_ext():
+            logger.info(f"Skipping embedding update for {message_id}: pgvector not ready.")
+            return
+
         statement = select(Message).where(Message.id == message_id)
         result = await self.session.execute(statement)
         message = result.scalar_one_or_none()
@@ -114,18 +122,45 @@ class ConversationRepository(BaseRepository[Conversation]):
             message.embedding = embedding
             await self.session.flush()
 
+    async def _check_vector_ext(self) -> bool:
+        """Check if pgvector extension is available and embedding is a vector."""
+        try:
+            # Check if extension exists
+            res = await self.session.execute(sa_text("SELECT count(*) FROM pg_extension WHERE extname = 'vector'"))
+            if res.scalar() == 0:
+                return False
+            # Check if column is actually a vector (not text)
+            res = await self.session.execute(sa_text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_name = 'messages' AND column_name = 'embedding'"
+            ))
+            dtype = res.scalar()
+            return dtype == 'USER-DEFINED' # 'vector' shows up as USER-DEFINED in info schema usually
+        except Exception:
+            return False
+
     async def search_similar_messages(
         self, user_id: UUID, query_embedding: List[float], limit: int = 5, threshold: float = 0.7
     ) -> List[Message]:
         """Perform semantic search across all of a user's conversations."""
-        # Note: We join with Conversation to ensure we filter by the correct user_id
-        statement = (
-            select(Message)
-            .join(Conversation)
-            .where(Conversation.user_id == user_id)
-            .where(Message.embedding.cosine_distance(query_embedding) < (1 - threshold))
-            .order_by(Message.embedding.cosine_distance(query_embedding))
-            .limit(limit)
-        )
-        result = await self.session.execute(statement)
-        return list(result.scalars().all())
+        # Feature detection to avoid Aborted Transaction on missing pgvector
+        if not await self._check_vector_ext():
+            logger.warning("pgvector not available or misconfigured. Skipping semantic search.")
+            return []
+
+        try:
+            # Note: We join with Conversation to ensure we filter by the correct user_id
+            statement = (
+                select(Message)
+                .join(Conversation)
+                .where(Conversation.user_id == user_id)
+                .where(Message.embedding.cosine_distance(query_embedding) < (1 - threshold))
+                .order_by(Message.embedding.cosine_distance(query_embedding))
+                .limit(limit)
+            )
+            result = await self.session.execute(statement)
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Semantic search failed at runtime: {e}")
+            await self.session.rollback()
+            return []

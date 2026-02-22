@@ -208,6 +208,7 @@ async def chat_completion(request: ChatRequest, db: AsyncSession = Depends(get_d
         )
 
     except Exception as e:
+        await db.rollback()
         logger.error(f"Chat completion error: {e}")
         import traceback
 
@@ -418,6 +419,7 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
                     )
 
             except Exception as e:
+                await db.rollback()
                 logger.error(f"Streaming error: {e}")
                 import traceback
 
@@ -430,6 +432,7 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
     except Exception as e:
+        await db.rollback()
         logger.error(f"WebSocket error: {e}")
     finally:
         logger.info("WebSocket connection closed")

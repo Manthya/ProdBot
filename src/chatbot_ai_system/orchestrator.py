@@ -183,7 +183,12 @@ class ChatOrchestrator:
                             semantic_context += f"- {m.role}: {m.content}\n"
                         logger.info(f"Phase 5.5: Retrieved {len(similar_msgs)} similar messages.")
             except Exception as e:
-                logger.error(f"Semantic memory retrieval failed: {e}")
+                logger.error(f"Semantic memory retrieval failed: {e}. Rolling back session to recover.")
+                # If the SQL fails (e.g. pgvector missing), we MUST rollback to continue using the session
+                try:
+                    await self.conversation_repo.session.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Second-level rollback failed: {rb_err}")
 
         # Update Context Cache
         await redis_client.set(
@@ -261,10 +266,8 @@ class ChatOrchestrator:
                 else None,
                 model=model,
             )
-            import asyncio
-
-            asyncio.create_task(self._embed_message(msg.id, agentic_content))
-            asyncio.create_task(self._embed_user_message(conv_uuid, current_seq - 1))
+            await self._embed_message(msg.id, agentic_content)
+            await self._embed_user_message(conv_uuid, current_seq - 1)
 
             # Summarization check
             if (current_seq - last_summarized_seq) >= 20:
@@ -355,12 +358,11 @@ class ChatOrchestrator:
                 model=model,
             )
 
-            # Background embedding (Phase 3) - Temporarily disabled to avoid session errors in tests
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, full_content))
+            # Background embedding (Phase 3) - Sequential safe execution
+            await self._embed_message(msg.id, full_content)
 
             # Also embed the user message that started this turn
-            # asyncio.create_task(self._embed_user_message(conv_uuid, current_seq - 1))
+            await self._embed_user_message(conv_uuid, current_seq - 1)
 
             # Execute tools
             for tool_call in current_tool_calls:
@@ -427,9 +429,7 @@ class ChatOrchestrator:
                 else None,
                 model=model,
             )
-            # Background embedding (Phase 3) - Disabled
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, synthesis_content))
+            await self._embed_message(msg.id, synthesis_content)
 
         else:
             # Persist final response
@@ -446,15 +446,12 @@ class ChatOrchestrator:
                 else None,
                 model=model,
             )
-            # Background embedding (Phase 3) - Disabled
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, full_content))
+            await self._embed_message(msg.id, full_content)
 
             # Also embed user message
-            # asyncio.create_task(self._embed_user_message(conv_uuid, current_seq - 1))
+            await self._embed_user_message(conv_uuid, current_seq - 1)
             # Background embedding (Phase 3)
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, full_content))
+            await self._embed_message(msg.id, full_content)
 
         # --- Phase 9: Background Summarization (Phase 2.7) ---
         # Trigger if more than 20 messages have passed since last summary
