@@ -11,7 +11,9 @@ Phase 5.5: Adds agentic orchestration for complex multi-step tasks.
 - COMPLEX queries → Plan + ReAct agentic loop
 """
 
+import asyncio
 import logging
+import re
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import UUID
@@ -37,6 +39,13 @@ from chatbot_ai_system.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
+# Fix 2.3: Fast-path bypass for trivially simple queries
+TRIVIAL_PATTERNS = re.compile(
+    r'^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|good|great|bye|'
+    r'what is your name|who are you|how are you)[!?.\s]*$',
+    re.IGNORECASE
+)
+
 
 class ChatOrchestrator:
     """
@@ -59,6 +68,65 @@ class ChatOrchestrator:
         # Always use Ollama for embeddings (Hybrid Architecture)
         self.embedding_service = EmbeddingService(base_url=self.settings.ollama_base_url)
         self.agentic_engine = AgenticEngine(provider=provider, registry=registry)
+        # Fix 1.1: Cancellation signal for stream abort safety
+        self._cancelled = asyncio.Event()
+
+    def cancel(self):
+        """Signal cancellation — called when client disconnects mid-stream."""
+        self._cancelled.set()
+
+    def _is_cancelled(self) -> bool:
+        return self._cancelled.is_set()
+
+    # Fix 1.2: Token-aware context windowing
+    def _estimate_tokens(self, text: str) -> int:
+        """Rough token estimate: ~4 chars per token for English."""
+        if not text:
+            return 0
+        return len(text) // 4
+
+    async def _build_context_window(
+        self, messages: List[ChatMessage], conv_uuid, max_context_tokens: int = 24000
+    ) -> List[ChatMessage]:
+        """Assemble context window respecting token budget instead of flat message count."""
+        # Reserve tokens: system prompt (~500), response (~2000)
+        available = max_context_tokens - 2500
+
+        result = []
+
+        # Always keep system message
+        if messages and messages[0].role == MessageRole.SYSTEM:
+            system_tokens = self._estimate_tokens(messages[0].content)
+            available -= system_tokens
+            result.append(messages[0])
+            messages = messages[1:]
+
+        # Walk backwards from most recent, filling budget
+        kept = []
+        for msg in reversed(messages):
+            msg_tokens = self._estimate_tokens(msg.content)
+            if available - msg_tokens < 0:
+                break
+            kept.append(msg)
+            available -= msg_tokens
+
+        kept.reverse()
+
+        # If we dropped messages, inject summary as bridge
+        if len(kept) < len(messages):
+            try:
+                summary_data = await self.conversation_repo.get_conversation_summary(conv_uuid)
+                if summary_data and summary_data.get("summary"):
+                    bridge = ChatMessage(
+                        role=MessageRole.SYSTEM,
+                        content=f"[Earlier context summary]: {summary_data['summary']}"
+                    )
+                    result.append(bridge)
+            except Exception as e:
+                logger.warning(f"Could not inject summary bridge: {e}")
+
+        result.extend(kept)
+        return result
 
     async def run(
         self,
@@ -153,21 +221,27 @@ class ChatOrchestrator:
             # We'll cache it after we've computed all parts
             pass
 
-        # --- Phase 4+5.5: Intent + Complexity Classification ---
-        intent, complexity = await self.agentic_engine.classify_intent_and_complexity(
-            user_input, model, has_media=(has_images or has_audio_transcription)
-        )
-        logger.info(f"Phase 4: intent='{intent}', complexity='{complexity}'")
-        INTENT_CLASSIFICATION_TOTAL.labels(intent=intent).inc()
-
-        # --- Phase 5: Tool Scope Reduction ---
-        if complexity == "COMPLEX":
-            tools = await self.agentic_engine.get_expanded_tools(intent, user_input)
+        # --- Fix 2.3: Fast-path bypass for trivial queries ---
+        if TRIVIAL_PATTERNS.match(user_input.strip()):
+            intent, complexity = "GENERAL", "SIMPLE"
+            tools = []
+            logger.info(f"Fast-path: trivial query bypass for '{user_input[:50]}'")
         else:
-            tools = await self._filter_tools(intent, user_input)
-        logger.info(
-            f"Phase 5: Selected {len(tools)} tools: {[t['function']['name'] for t in tools]}"
-        )
+            # --- Phase 4+5.5: Intent + Complexity Classification ---
+            intent, complexity = await self.agentic_engine.classify_intent_and_complexity(
+                user_input, model, has_media=(has_images or has_audio_transcription)
+            )
+            logger.info(f"Phase 4: intent='{intent}', complexity='{complexity}'")
+
+            # --- Phase 5: Tool Scope Reduction ---
+            if complexity == "COMPLEX":
+                tools = await self.agentic_engine.get_expanded_tools(intent, user_input)
+            else:
+                tools = await self._filter_tools(intent, user_input)
+            logger.info(
+                f"Phase 5: Selected {len(tools)} tools: {[t['function']['name'] for t in tools]}"
+            )
+        INTENT_CLASSIFICATION_TOTAL.labels(intent=intent).inc()
 
         # --- Phase 5.5: Semantic Memory Retrieval ---
         if not semantic_context:
@@ -202,7 +276,8 @@ class ChatOrchestrator:
         )
 
         # Prepare messages
-        messages = list(conversation_history)
+        # Fix 1.2: Token-aware context windowing
+        messages = await self._build_context_window(list(conversation_history), conv_uuid)
         current_seq = len(conversation_history)
 
         # Inject Dynamic System Prompt
@@ -247,6 +322,10 @@ class ChatOrchestrator:
                 temperature=temperature,
                 max_tokens=max_tokens,
             ):
+                # Fix 1.1: Check for cancellation each iteration
+                if self._is_cancelled():
+                    logger.info("Orchestrator cancelled during agentic execution")
+                    return
                 agentic_content += chunk.content
                 if chunk.usage:
                     self.last_usage = chunk.usage
@@ -266,21 +345,23 @@ class ChatOrchestrator:
                 else None,
                 model=model,
             )
-            await self._embed_message(msg.id, agentic_content)
-            await self._embed_user_message(conv_uuid, current_seq - 1)
+            # Fix 3.2: Fire-and-forget embeddings
+            asyncio.create_task(self._safe_embed(msg.id, agentic_content))
+            asyncio.create_task(self._safe_embed_user(conv_uuid, current_seq - 1))
 
             # Summarization check
+            # Fix 3.2: Fire-and-forget summarization
             if (current_seq - last_summarized_seq) >= 20:
-                await self._summarize_conversation(
+                asyncio.create_task(self._safe_summarize(
                     conv_uuid, current_seq, last_summarized_seq, model
-                )
+                ))
 
             ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=intent).observe(
                 time.time() - start_time
             )
             return
 
-        # --- Phase 6: Fast Path (SIMPLE) — One-shot flow (unchanged) ---
+        # --- Phase 6: Fast Path (SIMPLE) — One-shot flow ---
         current_tool_calls: List[ToolCall] = []
         full_content = ""
         self.last_usage = None  # Track usage from stream
@@ -293,6 +374,11 @@ class ChatOrchestrator:
             max_tokens=max_tokens,
             tools=tools if tools else None,
         ):
+            # Fix 1.1: Check for cancellation
+            if self._is_cancelled():
+                logger.info("Orchestrator cancelled during streaming")
+                return
+
             full_content += chunk.content
             if chunk.tool_calls:
                 logger.info(
@@ -358,11 +444,9 @@ class ChatOrchestrator:
                 model=model,
             )
 
-            # Background embedding (Phase 3) - Sequential safe execution
-            await self._embed_message(msg.id, full_content)
-
-            # Also embed the user message that started this turn
-            await self._embed_user_message(conv_uuid, current_seq - 1)
+            # Fix 3.2: Fire-and-forget embeddings (was blocking hot path)
+            asyncio.create_task(self._safe_embed(msg.id, full_content))
+            asyncio.create_task(self._safe_embed_user(conv_uuid, current_seq - 1))
 
             # Execute tools
             for tool_call in current_tool_calls:
@@ -429,7 +513,7 @@ class ChatOrchestrator:
                 else None,
                 model=model,
             )
-            await self._embed_message(msg.id, synthesis_content)
+            asyncio.create_task(self._safe_embed(msg.id, synthesis_content))
 
         else:
             # Persist final response
@@ -446,23 +530,15 @@ class ChatOrchestrator:
                 else None,
                 model=model,
             )
-            await self._embed_message(msg.id, full_content)
+            # Fix 3.2: Fire-and-forget + removed duplicate embed call
+            asyncio.create_task(self._safe_embed(msg.id, full_content))
+            asyncio.create_task(self._safe_embed_user(conv_uuid, current_seq - 1))
 
-            # Also embed user message
-            await self._embed_user_message(conv_uuid, current_seq - 1)
-            # Background embedding (Phase 3)
-            await self._embed_message(msg.id, full_content)
-
-        # --- Phase 9: Background Summarization (Phase 2.7) ---
-        # Trigger if more than 20 messages have passed since last summary
+        # --- Phase 9: Background Summarization (Fix 3.2: fire-and-forget) ---
         if (current_seq - last_summarized_seq) >= 20:
-            # We should run this in background, but for now we'll await it to ensure it completes
-            # In a real async app, use asyncio.create_task() if fire-and-forget is safe
-            # For data integrity, running it here is safer (though adds latency to the FINAL chunk)
-            # Let's use asyncio.create_task to not block response?
-            # But we need to use 'await' safely.
-            # Let's await it to be safe for now, latency hit happens only every 20 turns.
-            await self._summarize_conversation(conv_uuid, current_seq, last_summarized_seq, model)
+            asyncio.create_task(self._safe_summarize(
+                conv_uuid, current_seq, last_summarized_seq, model
+            ))
 
         # Record total duration
         ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=intent).observe(
@@ -545,7 +621,7 @@ class ChatOrchestrator:
             logger.error(f"Summarization failed: {e}")
 
     async def _embed_message(self, message_id: Any, content: str):
-        """Generate and save embedding for a message in the background."""
+        """Generate and save embedding for a message."""
         try:
             embedding = await self.embedding_service.generate_embedding(content)
             if embedding:
@@ -553,6 +629,27 @@ class ChatOrchestrator:
                 logger.info(f"Generated embedding for message {message_id}")
         except Exception as e:
             logger.error(f"Failed to generate embedding for message {message_id}: {e}")
+
+    async def _safe_embed(self, message_id: Any, content: str):
+        """Fire-and-forget wrapper for _embed_message with error isolation."""
+        try:
+            await self._embed_message(message_id, content)
+        except Exception as e:
+            logger.error(f"Background embed failed for {message_id}: {e}")
+
+    async def _safe_embed_user(self, conversation_id: UUID, sequence_number: int):
+        """Fire-and-forget wrapper for _embed_user_message."""
+        try:
+            await self._embed_user_message(conversation_id, sequence_number)
+        except Exception as e:
+            logger.error(f"Background user embed failed at seq {sequence_number}: {e}")
+
+    async def _safe_summarize(self, conversation_id: Any, current_seq: int, last_seq: int, model: str):
+        """Fire-and-forget wrapper for _summarize_conversation."""
+        try:
+            await self._summarize_conversation(conversation_id, current_seq, last_seq, model)
+        except Exception as e:
+            logger.error(f"Background summarization failed: {e}")
 
     async def _embed_user_message(self, conversation_id: UUID, sequence_number: int):
         """Find the user message by sequence number and embed it."""

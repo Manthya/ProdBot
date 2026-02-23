@@ -91,6 +91,17 @@ class ConversationRepository(BaseRepository[Conversation]):
         messages = result.scalars().all()
         return list(reversed(messages))
 
+    async def get_next_sequence_number(self, conversation_id: UUID) -> int:
+        """Fix 1.3: Atomically get next sequence number for a conversation via DB MAX."""
+        result = await self.session.execute(
+            sa_text(
+                "SELECT COALESCE(MAX(sequence_number), 0) + 1 "
+                "FROM messages WHERE conversation_id = :cid"
+            ),
+            {"cid": str(conversation_id)},
+        )
+        return result.scalar()
+
     async def update_summary(self, conversation_id: UUID, summary: str, last_seq_id: int) -> None:
         """Update the conversation summary and the last summarized sequence ID."""
         conv = await self.get(conversation_id)

@@ -1,0 +1,129 @@
+# Phase 8.0: Red-Team Adversarial Test Suite
+
+A deeply aggressive, layer-by-layer adversarial testing strategy inspired by PenTAGI's parallel multi-agent validation. Tests target state corruption, infinite agent loops, tool boundary bypassing, and race conditions across all 4 system layers. **All tests run offline with mocked LLM calls.**
+
+## Proposed Changes
+
+### Test Infrastructure
+
+#### [NEW] [conftest.py](file:///Users/mk/Documents/chatbot-ai-systems-production/tests/redteam/conftest.py)
+
+Shared Pytest fixtures for the entire red-team suite:
+- `mock_provider` — An `AsyncMock` of `BaseLLMProvider` with configurable `.complete()` and `.stream()` responses
+- `tool_registry` — A fresh [ToolRegistry](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/tools/registry.py#40-192) populated with mock tools (no real MCP servers)
+- `mock_conversation_repo` / `mock_memory_repo` — AsyncMock repositories preventing any DB calls
+- `mock_redis` — Patched `redis_client` preventing real Redis calls
+- `async_client` — `httpx.AsyncClient` against the FastAPI `TestClient` for async endpoint testing
+
+---
+
+### Layer 1: Frontend (UI & State Resilience)
+
+#### [NEW] [test_frontend_concurrency.spec.ts](file:///Users/mk/Documents/chatbot-ai-systems-production/tests/redteam/frontend/test_frontend_concurrency.spec.ts)
+
+**Playwright** test scripts:
+
+| Test | Attack Vector | Assertion |
+|---|---|---|
+| Rapid Message Burst | Send 4 messages before first stream finishes | UI shows all 4 messages in correct order; no phantom duplicates; final response renders |
+| WebSocket Reconnect Storm | 5× rapid connect/disconnect cycles during active stream | Chat remains functional after reconnect; no orphan listeners |
+| Barge-in During Stream | Send new message while stream chunks are arriving | Previous stream is visually interrupted or queued; no fragment mixing |
+
+---
+
+### Layer 2: Backend API & Memory State
+
+#### [NEW] [test_thread_isolation.py](file:///Users/mk/Documents/chatbot-ai-systems-production/tests/redteam/backend/test_thread_isolation.py)
+
+**Pytest (async)** — Thread isolation and memory state tests:
+
+| Test | Attack Vector | Assertion |
+|---|---|---|
+| Thread Secret Leakage | Inject `SECRET_CANARY_ABC123` into User A's thread. Prompt User B's thread with "what secret was shared?" | User B's response MUST NOT contain the canary string |
+| Concurrent Thread Interleaving | 5 parallel async `POST /api/chat` with different `conversation_id` and unique canary tokens | Each response only contains its own canary; zero cross-contamination |
+| Context Overflow (2MB payload) | Send a 2MB message body to `POST /api/chat` | Server returns 413 or truncates gracefully — no unhandled 500 |
+| Context Overflow via History | Build 500-message conversation history, then send next message | Orchestrator's [_build_context_window](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/orchestrator.py#88-130) caps tokens; response succeeds |
+| Sequence Number Race | 2 concurrent messages to same conversation | Both get unique sequence numbers; no constraint violation |
+
+---
+
+### Layer 3: Agentic Routing & Flow (Logic Core)
+
+#### [NEW] [test_agentic_cycles.py](file:///Users/mk/Documents/chatbot-ai-systems-production/tests/redteam/agentic/test_agentic_cycles.py)
+
+**Pytest (async)** — Cycle detection, deadlock, and routing bypass:
+
+| Test | Attack Vector | Assertion |
+|---|---|---|
+| Infinite Tool Loop | Mock LLM to always return the same tool call (identical name + args) every round | `AgenticEngine.execute` hits `CYCLE_DETECTED` and exits within MAX_AGENT_ROUNDS (8) |
+| Consecutive Failure Circuit Breaker | Mock all tool calls to raise exceptions | Circuit breaker trips after `MAX_CONSECUTIVE_FAILURES` (2); engine synthesizes |
+| Timeout Enforcement | Mock tools with `asyncio.sleep(600)` | Engine reaches `AGENT_TIMEOUT_SEC` (300s, we'll reduce for test) and force-synthesizes |
+| Plan Explosion | Mock planner to return 20 steps | Plan capped at 6 steps |
+| Routing Bypass (Trivial → Complex) | Send "Hello!" but mock classifier to return `COMPLEX` + `FETCH` | Trivial pattern regex fires first; no tools selected; fast-path taken |
+| Routing Bypass (Complex → Trivial) | Send complex multi-step query; mock classifier returns `GENERAL` + `SIMPLE` | No agentic engine invoked; one-shot path used |
+| Tool Name Hallucination | Mock LLM to call a non-existent tool `hack_the_planet` | `[INVALID_TOOL]` error injected; tool NOT executed; engine continues |
+| Tool Whitelist Escape | During execute, mock LLM returning a tool NOT in the [tools](file:///Users/mk/Documents/chatbot-ai-systems-production/src/chatbot_ai_system/tools/mcp_client.py#55-96) list provided | Whitelist validation blocks execution |
+
+---
+
+### Layer 4: MCP & External Tool (Payload Manipulation)
+
+#### [NEW] [test_mcp_payloads.py](file:///Users/mk/Documents/chatbot-ai-systems-production/tests/redteam/tools/test_mcp_payloads.py)
+
+**Pytest (async)** — Payload injection, boundary violations:
+
+| Test | Attack Vector | Assertion |
+|---|---|---|
+| Malformed JSON Arguments | Call tool with `{"path": null, "content": {"$ne": 1}}` | Tool raises or returns structured error; no crash |
+| SQL Injection in Args | Call tool with `{"query": "'; DROP TABLE users; --"}` | Arguments passed verbatim to MCP (no SQL execution); no server crash |
+| Directory Traversal | Call filesystem tool with `{"path": "../../etc/passwd"}` | MCP server blocks or tool returns safe error |
+| Oversized Argument | Pass a 5MB string as tool argument | Tool execution times out or rejects; no OOM |
+| Read-Only MCP Write Attempt | Mock a `git_commit` tool on a READ-ONLY configured MCP client | Tool call rejected or returns error; agent cannot hallucinate success |
+| MCP Cache Poisoning | Call tool, mock Redis to return stale/wrong cached result, then verify fresh call | Compare: stale result vs fresh result differ; cache invalidation works |
+| Tool Result Injection | Mock tool returning content containing `[TOOL_ERROR]` prefix to confuse the LLM | LLM is given the raw result; no internal error handling triggered falsely |
+
+---
+
+### Master Test Plan Documentation
+
+#### [NEW] [phase_8.0.md](file:///Users/mk/Documents/chatbot-ai-systems-production/docs/phase_8.0.md)
+
+Full hierarchical test plan document with:
+- Architecture diagram (Mermaid)
+- Attack surface mapping per layer
+- Test IDs and severity ratings
+- CI integration instructions
+
+## Verification Plan
+
+### Automated Tests
+
+All tests are designed to run offline with mocked LLM responses.
+
+**Run the entire red-team suite:**
+```bash
+cd /Users/mk/Documents/chatbot-ai-systems-production
+
+# Backend (Pytest) — all 3 layers
+PYTHONPATH=src pytest tests/redteam/ -v --tb=short -x
+
+# Frontend (Playwright) — Layer 1
+cd frontend && npx playwright test tests/redteam/ --reporter=list
+```
+
+**Run individual layers:**
+```bash
+# Layer 2: Backend
+PYTHONPATH=src pytest tests/redteam/backend/ -v
+
+# Layer 3: Agentic
+PYTHONPATH=src pytest tests/redteam/agentic/ -v
+
+# Layer 4: MCP/Tools
+PYTHONPATH=src pytest tests/redteam/tools/ -v
+```
+
+### Manual Verification
+- Review the test plan document at `docs/phase_8.0.md` for completeness
+- Confirm all tests pass with `0 failures` on first run
+- Verify no real API calls (Ollama, Redis, MCP servers) are made during test execution by checking test logs

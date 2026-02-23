@@ -107,6 +107,7 @@ flowchart TB
     
     subgraph Core["🧠 Core Layer"]
         Orchestrator["Chat Orchestrator<br/>(9-Phase Pipeline)"]
+        AgenticEngine["Agentic Engine<br/>(Plan+ReAct + Safety)"]
         Provider["LLM Provider"]
         Registry["Tool Registry"]
         MCPClient["MCP Client Layer"]
@@ -158,6 +159,7 @@ flowchart TB
     Upload --> MediaPipe
     VoiceWS --> STT & TTS
     MediaPipe --> ImgProc & STT & VidProc
+    Orchestrator --> AgenticEngine --> Provider
     Orchestrator --> Provider
     Orchestrator --> Registry
     Orchestrator --> Redis
@@ -206,9 +208,10 @@ flowchart TD
 
 | Path | Complexity | Description | Typical Latency |
 | :--- | :--- | :--- | :--- |
-| **Fast Path** | `SIMPLE` | Direct LLM response for greetings, facts, and definitions. Tools are explicitly disabled to save tokens and time. | **~5-8s** |
+| **Trivial Bypass** | `TRIVIAL` | Regex-matched greetings/acks ("hi", "thanks", "yes") skip the LLM classifier entirely. | **<1ms routing** |
+| **Fast Path** | `SIMPLE` | Direct LLM response for facts and definitions. Tools are explicitly disabled to save tokens and time. | **~5-8s** |
 | **Tool Path** | `SIMPLE` | Single-step tool usage for straightforward tasks (e.g., "List files", "Read specific file"). Uses broad keyword matching. | **~20-40s** |
-| **Agentic Path** | `COMPLEX` | Full reasoning loop for multi-step tasks (e.g., "Analyze codebase", "Compare files"). Uses the Sequential Thinking planner. | **60s+** |
+| **Agentic Path** | `COMPLEX` | Full reasoning loop with cycle detection, circuit breaker, tool retry, and whitelist validation. | **60s+** |
 
 ---
 
@@ -388,7 +391,9 @@ chatbot-ai-systems-production/
 - [x] **Phase 5.5**: Performance Optimization & Reliability — [Docs](docs/phase_5.5.md)
 - [x] **Phase 6.0**: Multi-Provider Orchestration (OpenAI, Anthropic, Gemini) — [Docs](docs/phase_6.0.md)
 - [x] **Phase 6.5**: Free Tool Integration (Web Search & Coding) — [Docs](docs/phase_6.5.md)
-- [ ] **Phase 7.0**: Authentication & Multi-Tenancy
+- [x] **Phase 7.0**: Model Integration & System Hardening — [Docs](docs/phase_7.0.md)
+- [x] **Phase 7.1**: Production Hardening — Deep Audit & 12 Critical Fixes — [Docs](docs/phase_7.1.md)
+- [ ] **Phase 8.0**: Authentication & Multi-Tenancy
 
 ---
 

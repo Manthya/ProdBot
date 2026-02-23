@@ -58,11 +58,15 @@ class OllamaProvider(BaseLLMProvider):
         self._client: Optional[httpx.AsyncClient] = None
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client."""
+        """Get or create HTTP client with connection pooling."""
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=httpx.Timeout(60.0, connect=10.0),
+                timeout=httpx.Timeout(120.0, connect=10.0),
+                limits=httpx.Limits(
+                    max_connections=20,
+                    max_keepalive_connections=10,
+                ),
             )
         return self._client
 
@@ -332,70 +336,71 @@ class OllamaProvider(BaseLLMProvider):
         first_token_received = False
 
         try:
-            # Use a fresh client for streaming to avoid connection issues
-            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
-                async with client.stream("POST", url, json=payload) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if line:
-                            import json
+            # Fix 3.5: Reuse shared pooled client instead of creating one per call
+            client = await self._get_client()
+            url = f"{self.base_url}/api/chat"
+            async with client.stream("POST", url, json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line:
+                        import json
 
-                            data = json.loads(line)
+                        data = json.loads(line)
 
-                            if not first_token_received:
-                                ttft = time.time() - start_time
-                                LLM_TTFT_SECONDS.labels(
-                                    model=model, provider=self.provider_name
-                                ).observe(ttft)
-                                first_token_received = True
+                        if not first_token_received:
+                            ttft = time.time() - start_time
+                            LLM_TTFT_SECONDS.labels(
+                                model=model, provider=self.provider_name
+                            ).observe(ttft)
+                            first_token_received = True
 
-                            message_data = data.get("message", {})
-                            content = message_data.get("content", "")
-                            done = data.get("done", False)
+                        message_data = data.get("message", {})
+                        content = message_data.get("content", "")
+                        done = data.get("done", False)
 
-                            # Extract tool calls if present
-                            tool_calls = None
-                            tool_calls_data = message_data.get("tool_calls")
-                            if tool_calls_data:
-                                tool_calls = []
-                                for tc in tool_calls_data:
-                                    function_data = tc.get("function", {})
-                                    tool_calls.append(
-                                        ToolCall(
-                                            id=tc.get("id") or str(uuid.uuid4()),
-                                            function=ToolCallFunction(
-                                                name=function_data.get("name"),
-                                                arguments=function_data.get("arguments", {}),
-                                            ),
-                                        )
+                        # Extract tool calls if present
+                        tool_calls = None
+                        tool_calls_data = message_data.get("tool_calls")
+                        if tool_calls_data:
+                            tool_calls = []
+                            for tc in tool_calls_data:
+                                function_data = tc.get("function", {})
+                                tool_calls.append(
+                                    ToolCall(
+                                        id=tc.get("id") or str(uuid.uuid4()),
+                                        function=ToolCallFunction(
+                                            name=function_data.get("name"),
+                                            arguments=function_data.get("arguments", {}),
+                                        ),
                                     )
-
-                            if content or done or tool_calls:
-                                usage = None
-                                if done:
-                                    usage = UsageInfo(
-                                        prompt_tokens=data.get("prompt_eval_count", 0),
-                                        completion_tokens=data.get("eval_count", 0),
-                                        total_tokens=data.get("prompt_eval_count", 0)
-                                        + data.get("eval_count", 0),
-                                    )
-                                    # Record metrics on completion
-                                    LLM_REQUESTS_TOTAL.labels(
-                                        model=model, provider=self.provider_name, status="success"
-                                    ).inc()
-                                    LLM_REQUEST_DURATION_SECONDS.labels(
-                                        model=model, provider=self.provider_name
-                                    ).observe(time.time() - start_time)
-                                    LLM_TOKENS_TOTAL.labels(
-                                        model=model, provider=self.provider_name, type="prompt"
-                                    ).inc(usage.prompt_tokens)
-                                    LLM_TOKENS_TOTAL.labels(
-                                        model=model, provider=self.provider_name, type="completion"
-                                    ).inc(usage.completion_tokens)
-
-                                yield StreamChunk(
-                                    content=content, done=done, tool_calls=tool_calls, usage=usage
                                 )
+
+                        if content or done or tool_calls:
+                            usage = None
+                            if done:
+                                usage = UsageInfo(
+                                    prompt_tokens=data.get("prompt_eval_count", 0),
+                                    completion_tokens=data.get("eval_count", 0),
+                                    total_tokens=data.get("prompt_eval_count", 0)
+                                    + data.get("eval_count", 0),
+                                )
+                                # Record metrics on completion
+                                LLM_REQUESTS_TOTAL.labels(
+                                    model=model, provider=self.provider_name, status="success"
+                                ).inc()
+                                LLM_REQUEST_DURATION_SECONDS.labels(
+                                    model=model, provider=self.provider_name
+                                ).observe(time.time() - start_time)
+                                LLM_TOKENS_TOTAL.labels(
+                                    model=model, provider=self.provider_name, type="prompt"
+                                ).inc(usage.prompt_tokens)
+                                LLM_TOKENS_TOTAL.labels(
+                                    model=model, provider=self.provider_name, type="completion"
+                                ).inc(usage.completion_tokens)
+
+                            yield StreamChunk(
+                                content=content, done=done, tool_calls=tool_calls, usage=usage
+                            )
 
         except httpx.HTTPError as e:
             logger.error(f"Ollama streaming error: {e}")

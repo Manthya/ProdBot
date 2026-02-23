@@ -44,6 +44,8 @@ export default function Home() {
     // WebSocket for Chat Streaming (Text Mode)
     const wsRef = useRef<WebSocket | null>(null)
     const fullContentRef = useRef('')
+    // Fix 3.1: Request correlation counter
+    const requestIdRef = useRef(0)
 
     // Fetch Conversations
     const fetchConversations = useCallback(async () => {
@@ -102,6 +104,15 @@ export default function Home() {
         setIsLoading(true)
         setStatusMessage('Thinking...')
 
+        // Fix 3.1: Generate unique request ID for correlation
+        const currentRequestId = ++requestIdRef.current
+
+        // Fix 1.1: Abort any in-flight stream before starting new one
+        if (wsRef.current && wsRef.current.onmessage) {
+            wsRef.current.onmessage = null  // Detach old handler
+        }
+        fullContentRef.current = ''  // Reset accumulator
+
         // Optimistic update
         const userMsg: Message = { role: 'user', content }
         setMessages(prev => [...prev, userMsg])
@@ -125,7 +136,8 @@ export default function Home() {
                     }))
                 }],
                 conversation_id: conversationId,
-                model: undefined // Let backend use default setting
+                model: undefined, // Let backend use default setting
+                request_id: currentRequestId, // Fix 3.1: Request correlation
             }
 
             wsRef.current?.send(JSON.stringify(payload))
@@ -138,7 +150,10 @@ export default function Home() {
                 wsRef.current.onmessage = (event) => {
                     const data = JSON.parse(event.data)
 
-                    // Handle Status Updates
+                    // Fix 3.1: Ignore chunks from stale/old requests
+                    if (data.request_id !== undefined && data.request_id !== currentRequestId) {
+                        return
+                    }
                     if (data.status) {
                         setStatusMessage(data.status)
                     }
@@ -161,21 +176,21 @@ export default function Home() {
                     }
 
                     if (data.content) {
-                        fullContentRef.current += data.content
+                        const newContent = (fullContentRef.current += data.content)
                         // Update last message (streaming)
                         setMessages(prev => {
                             const last = prev[prev.length - 1]
 
                             // If last message acts as a tool carrier, start a new text bubble
                             if (last && last.role === 'assistant' && last.tool_calls && last.tool_calls.length > 0) {
-                                return [...prev, { role: 'assistant', content: fullContentRef.current }]
+                                return [...prev, { role: 'assistant', content: newContent }]
                             }
 
                             // Normal streaming (append to last)
                             if (last && last.role === 'assistant') {
-                                return [...prev.slice(0, -1), { ...last, content: fullContentRef.current }]
+                                return [...prev.slice(0, -1), { ...last, content: newContent }]
                             } else {
-                                return [...prev, { role: 'assistant', content: fullContentRef.current }]
+                                return [...prev, { role: 'assistant', content: newContent }]
                             }
                         })
                     }

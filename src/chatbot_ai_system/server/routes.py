@@ -148,11 +148,13 @@ async def chat_completion(request: ChatRequest, db: AsyncSession = Depends(get_d
     if last_msg.role != MessageRole.USER:
         raise HTTPException(status_code=400, detail="Last message must be from user")
 
+    # Fix 1.3: Use atomic sequence numbers from DB
+    current_seq = await conv_repo.get_next_sequence_number(conversation_id)
+
     # Check if duplicate (simple check)
     if not history or (
         history[-1].content != last_msg.content or history[-1].role != MessageRole.USER
     ):
-        current_seq = len(history) + 1
         await conv_repo.add_message(
             conversation_id=conversation_id,
             role=MessageRole.USER,
@@ -301,6 +303,7 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
 
     conv_repo = ConversationRepository(db)
     mem_repo = MemoryRepository(db)
+    orchestrator = None  # Fix 1.1: Track for cancellation
 
     try:
         while is_connected:
@@ -322,6 +325,9 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
                         ErrorResponse(error="Invalid request", detail=str(e)).model_dump()
                     )
                 continue
+
+            # Fix 3.1: Extract request_id from payload for correlation
+            request_id = data.get("request_id")
 
             active_model, active_provider = await get_active_model_and_provider(settings)
             provider_name = request.provider or active_provider
@@ -367,11 +373,13 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
             # Add User Message to DB
             user_msg = request.messages[-1]  # Assuming last message is new
 
+            # Fix 1.3: Atomic sequence numbers from DB
+            current_seq = await conv_repo.get_next_sequence_number(conversation_id)
+
             # Simple deduplication check in case client resends
             if not history or (
                 history[-1].content != user_msg.content or history[-1].role != MessageRole.USER
             ):
-                current_seq = len(history) + 1
                 await conv_repo.add_message(
                     conversation_id=conversation_id,
                     role=MessageRole.USER,
@@ -401,22 +409,30 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
                     user_id=str(user_id),
                 ):
                     if not is_connected:
+                        # Fix 1.1: Cancel orchestrator on disconnect
+                        if orchestrator:
+                            orchestrator.cancel()
                         break
 
                     chunk.conversation_id = str(conversation_id)
+                    # Fix 3.1: Echo request_id for client-side correlation
+                    chunk_data = chunk.model_dump()
+                    if request_id is not None:
+                        chunk_data["request_id"] = request_id
                     try:
-                        await websocket.send_json(chunk.model_dump())
+                        await websocket.send_json(chunk_data)
                     except Exception:
                         is_connected = False
                         break
 
                 if is_connected:
-                    await db.commit()  # Commit after full response (including assistant messages added by orchestrator)
-                    await websocket.send_json(
-                        StreamChunk(
-                            content="", done=True, conversation_id=str(conversation_id)
-                        ).model_dump()
-                    )
+                    await db.commit()
+                    done_data = StreamChunk(
+                        content="", done=True, conversation_id=str(conversation_id)
+                    ).model_dump()
+                    if request_id is not None:
+                        done_data["request_id"] = request_id
+                    await websocket.send_json(done_data)
 
             except Exception as e:
                 await db.rollback()
@@ -431,6 +447,9 @@ async def websocket_chat_stream(websocket: WebSocket, db: AsyncSession = Depends
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
+        # Fix 1.1: Cancel any in-flight orchestrator
+        if orchestrator:
+            orchestrator.cancel()
     except Exception as e:
         await db.rollback()
         logger.error(f"WebSocket error: {e}")

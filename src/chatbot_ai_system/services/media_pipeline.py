@@ -8,11 +8,13 @@ Handles image, audio, and video processing for multimodal chat.
 - Storage: save files to local media/ directory
 """
 
+import asyncio
 import base64
 import io
 import logging
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
@@ -34,6 +36,13 @@ KEYFRAME_INTERVAL_SEC = 5
 class MediaPipeline:
     """Central service for processing media attachments."""
 
+    # Fix 3.4: Singleton Whisper model (class-level)
+    _whisper_model = None
+    _whisper_lock = asyncio.Lock()
+
+    # Fix 3.3: Thread pool for CPU-bound work
+    _executor = ThreadPoolExecutor(max_workers=2)
+
     def __init__(self):
         settings = get_settings()
         self.storage_path = Path(settings.media_storage_path)
@@ -43,15 +52,39 @@ class MediaPipeline:
         self.supported_audio_types = set(settings.supported_audio_types.split(","))
         self.supported_video_types = set(settings.supported_video_types.split(","))
 
+    @classmethod
+    async def _get_whisper_model(cls):
+        """Fix 3.4: Lazy-load and cache the Whisper model as a singleton."""
+        if cls._whisper_model is None:
+            async with cls._whisper_lock:
+                if cls._whisper_model is None:  # Double-check after acquiring lock
+                    from faster_whisper import WhisperModel
+                    settings = get_settings()
+                    cls._whisper_model = WhisperModel(
+                        settings.stt_model,
+                        device=settings.stt_device,
+                        compute_type="int8",
+                    )
+                    logger.info(f"Whisper model '{settings.stt_model}' loaded (singleton)")
+        return cls._whisper_model
+
     # ─── Image Processing ───────────────────────────────────────────
 
     async def process_image(self, file_bytes: bytes, filename: str, mime_type: str) -> dict:
         """
         Process an image: validate, resize, encode to base64.
+        Fix 3.3: Offloads CPU-bound work to thread pool.
 
         Returns:
             dict with keys: base64_data, width, height, file_path, file_size_bytes
         """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            self._executor, self._process_image_sync, file_bytes, filename, mime_type
+        )
+
+    def _process_image_sync(self, file_bytes: bytes, filename: str, mime_type: str) -> dict:
+        """Synchronous image processing (runs in thread pool)."""
         try:
             img = Image.open(io.BytesIO(file_bytes))
             original_width, original_height = img.size
@@ -130,11 +163,27 @@ class MediaPipeline:
     async def process_video(self, file_bytes: bytes, filename: str, mime_type: str) -> dict:
         """
         Process video: extract keyframes + transcribe audio track.
+        Fix 3.3: Offloads CPU-bound work to thread pool.
 
         Returns:
             dict with keys: keyframes (list of base64), transcription,
                            duration_seconds, file_path, file_size_bytes
         """
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            self._executor, self._process_video_sync, file_bytes, filename, mime_type
+        )
+        # Transcribe audio (uses singleton Whisper model)
+        if result.get("_wav_bytes"):
+            try:
+                result["transcription"] = await self._transcribe_audio(result.pop("_wav_bytes"))
+            except Exception as e:
+                logger.warning(f"Could not transcribe video audio: {e}")
+                result.pop("_wav_bytes", None)
+        return result
+
+    def _process_video_sync(self, file_bytes: bytes, filename: str, mime_type: str) -> dict:
+        """Synchronous video processing (runs in thread pool)."""
         try:
             import tempfile
 
@@ -184,20 +233,21 @@ class MediaPipeline:
             finally:
                 os.unlink(tmp_path)
 
-            # Extract and transcribe audio track
-            transcription = None
+            # Extract audio track as WAV for later async transcription
+            wav_bytes = None
             try:
                 audio = AudioSegment.from_file(io.BytesIO(file_bytes))
                 audio = audio.set_frame_rate(16000).set_channels(1)
                 wav_buffer = io.BytesIO()
                 audio.export(wav_buffer, format="wav")
-                transcription = await self._transcribe_audio(wav_buffer.getvalue())
+                wav_bytes = wav_buffer.getvalue()
             except Exception as e:
                 logger.warning(f"Could not extract audio from video: {e}")
 
             return {
                 "keyframes": keyframes,
-                "transcription": transcription,
+                "transcription": None,
+                "_wav_bytes": wav_bytes,  # Transient — consumed by async caller
                 "duration_seconds": duration_seconds,
                 "width": width,
                 "height": height,
@@ -212,25 +262,28 @@ class MediaPipeline:
     # ─── STT (Whisper) ──────────────────────────────────────────────
 
     async def _transcribe_audio(self, wav_bytes: bytes) -> str:
-        """Transcribe WAV audio using faster-whisper."""
+        """Transcribe WAV audio using faster-whisper with singleton model."""
         import tempfile
 
-        from faster_whisper import WhisperModel
-
-        settings = get_settings()
+        # Fix 3.4: Use singleton model instead of re-instantiating
+        model = await self._get_whisper_model()
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp.write(wav_bytes)
             tmp_path = tmp.name
 
         try:
-            model = WhisperModel(
-                settings.stt_model,
-                device=settings.stt_device,
-                compute_type="int8",
+            # Fix 3.3: Run transcription in thread pool
+            loop = asyncio.get_event_loop()
+            segments, info = await loop.run_in_executor(
+                self._executor,
+                lambda: model.transcribe(tmp_path, beam_size=5)
             )
-            segments, info = model.transcribe(tmp_path, beam_size=5)
-            transcription = " ".join(segment.text.strip() for segment in segments)
+            # Consume segments iterator in thread pool too
+            transcription = await loop.run_in_executor(
+                self._executor,
+                lambda: " ".join(segment.text.strip() for segment in segments)
+            )
             logger.info(
                 f"STT completed: {info.language} ({info.language_probability:.1%}), "
                 f"{len(transcription)} chars"

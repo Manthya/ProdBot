@@ -8,6 +8,7 @@ Plan + ReAct hybrid for complex multi-step tasks.
 - Tool expansion: adds cross-category tools mid-loop if needed
 """
 
+import asyncio
 import logging
 import time
 from typing import Any, AsyncGenerator, Dict, List, Tuple
@@ -25,6 +26,9 @@ logger = logging.getLogger(__name__)
 MAX_AGENT_ROUNDS = 8  # Safety cap on total tool rounds
 AGENT_TIMEOUT_SEC = 300  # Hard timeout for entire agentic flow
 MAX_TOOLS_AGENTIC = 8  # Tool count cap (slightly higher than one-shot's 5)
+MAX_TOOL_RETRIES = 2  # Fix 2.1: Per-tool retry limit
+PER_TOOL_TIMEOUT_SEC = 30  # Fix 2.1: Per-tool execution timeout
+MAX_CONSECUTIVE_FAILURES = 2  # Fix 2.2: Circuit breaker threshold
 
 
 class AgenticEngine:
@@ -48,6 +52,52 @@ class AgenticEngine:
         """
         self.provider = provider
         self.registry = registry
+
+    # ------------------------------------------------------------------ #
+    # Fix 2.1: Tool execution with retry and structured errors
+    # ------------------------------------------------------------------ #
+
+    async def _execute_tool_with_retry(
+        self, tool_name: str, tool_args: dict
+    ) -> tuple:
+        """Execute tool with retry and per-tool timeout.
+        
+        Returns:
+            (result_string, success_bool)
+        """
+        try:
+            tool = self.registry.get_tool(tool_name)
+        except ValueError:
+            return (
+                f"[TOOL_ERROR] Tool '{tool_name}' not found in registry. "
+                f"DO NOT fabricate results. Acknowledge this tool is unavailable.",
+                False,
+            )
+
+        for attempt in range(MAX_TOOL_RETRIES):
+            try:
+                result = await asyncio.wait_for(
+                    tool.run(**tool_args),
+                    timeout=PER_TOOL_TIMEOUT_SEC,
+                )
+                return (str(result), True)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Tool {tool_name} timeout (attempt {attempt + 1}/{MAX_TOOL_RETRIES})"
+                )
+                if attempt < MAX_TOOL_RETRIES - 1:
+                    await asyncio.sleep(1)  # Brief backoff before retry
+            except Exception as e:
+                logger.error(f"Tool {tool_name} failed: {e}")
+                break  # Non-timeout errors are not retried
+
+        return (
+            f"[TOOL_ERROR] {tool_name} failed after {MAX_TOOL_RETRIES} attempts. "
+            f"DO NOT fabricate results from this tool. Acknowledge the failure "
+            f"and answer using your internal knowledge, clearly stating what "
+            f"you could not verify.",
+            False,
+        )
 
     # ------------------------------------------------------------------ #
     # Complexity Classifier
@@ -250,6 +300,18 @@ class AgenticEngine:
         logger.info(f"Phase 5.5 planner: {len(steps)} steps — {steps}")
         return steps
 
+    def _detect_language(self, text: str) -> str:
+        """Simple language detection based on common scripts."""
+        import re
+        # Check for Thai characters
+        if re.search(r'[\u0e00-\u0e7f]', text):
+            return "THAI"
+        # Check for Japanese characters
+        if re.search(r'[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]', text):
+            return "JAPANESE"
+        # Default to English
+        return "ENGLISH"
+
     # ------------------------------------------------------------------ #
     # Tool Expansion
     # ------------------------------------------------------------------ #
@@ -387,6 +449,10 @@ class AgenticEngine:
         round_num = 0
         all_tool_calls = []  # Track for persistence
 
+        # Fix 2.2: Cycle detection and circuit breaker state
+        tool_call_history = set()  # Set of (name, args_hash) tuples
+        consecutive_failures = 0
+
         # Stream the plan to user
         plan_text = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(plan))
         yield StreamChunk(
@@ -396,7 +462,8 @@ class AgenticEngine:
         )
 
         # Build agentic system prompt
-        agentic_prompt = self._get_agentic_system_prompt(plan, tools)
+        user_lang = self._detect_language(messages[-1].content if messages else "")
+        agentic_prompt = self._get_agentic_system_prompt(plan, tools, user_lang)
 
         # Inject/replace system message
         if messages and messages[0].role == MessageRole.SYSTEM:
@@ -420,6 +487,9 @@ class AgenticEngine:
         )
         messages.append(guidance)
 
+        # Fix 2.4: Build tool name whitelist
+        available_tool_names = {t["function"]["name"] for t in tools}
+
         # --- ReAct Loop ---
         current_step = 0
 
@@ -431,6 +501,18 @@ class AgenticEngine:
                 yield StreamChunk(
                     content="",
                     status="⏱️ Timeout reached — generating best answer with available info...",
+                    done=False,
+                )
+                break
+
+            # Fix 2.2: Circuit breaker check
+            if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                logger.warning(
+                    f"Phase 5.5: Circuit breaker tripped after {consecutive_failures} consecutive failures"
+                )
+                yield StreamChunk(
+                    content="",
+                    status="⚠️ Multiple tool failures — synthesizing with available info...",
                     done=False,
                 )
                 break
@@ -489,6 +571,46 @@ class AgenticEngine:
                 tool_name = tool_call.function.name
                 tool_args = tool_call.function.arguments
 
+                # Fix 2.4: Validate tool name against whitelist
+                if tool_name not in available_tool_names:
+                    result = (
+                        f"[INVALID_TOOL] '{tool_name}' is not available. "
+                        f"Available tools: {', '.join(sorted(available_tool_names))}. "
+                        f"Call one of these tools instead."
+                    )
+                    tool_msg = ChatMessage(
+                        role=MessageRole.TOOL,
+                        content=result,
+                        tool_call_id=tool_call.id,
+                    )
+                    messages.append(tool_msg)
+                    consecutive_failures += 1
+                    continue
+
+                # Fix 2.2: Cycle detection — has this exact call been made before?
+                try:
+                    args_hash = hash(str(sorted(tool_args.items())) if isinstance(tool_args, dict) else str(tool_args))
+                except Exception:
+                    args_hash = hash(str(tool_args))
+                call_signature = (tool_name, args_hash)
+
+                if call_signature in tool_call_history:
+                    result = (
+                        f"[CYCLE_DETECTED] You already called {tool_name} with identical "
+                        f"arguments and got the same result. Do NOT repeat this call. "
+                        f"Move to the next step or provide your final answer."
+                    )
+                    tool_msg = ChatMessage(
+                        role=MessageRole.TOOL,
+                        content=result,
+                        tool_call_id=tool_call.id,
+                    )
+                    messages.append(tool_msg)
+                    consecutive_failures += 1
+                    continue
+
+                tool_call_history.add(call_signature)
+
                 # Status update
                 step_label = f"Step {min(current_step + 1, total_steps)}/{total_steps}"
                 yield StreamChunk(
@@ -497,33 +619,34 @@ class AgenticEngine:
                     done=False,
                 )
 
-                # Execute
-                try:
-                    tool_start = time.time()
-                    tool = self.registry.get_tool(tool_name)
-                    result = await tool.run(**tool_args)
-                    tool_duration = time.time() - tool_start
+                # Fix 2.1: Execute with retry and structured errors
+                result, success = await self._execute_tool_with_retry(tool_name, tool_args)
+                if success:
+                    consecutive_failures = 0
                     logger.info(
-                        f"Phase 5.5 round {round_num + 1}: "
-                        f"{tool_name} completed in {tool_duration:.2f}s"
+                        f"Phase 5.5 round {round_num + 1}: {tool_name} completed"
                     )
-                except Exception as e:
-                    logger.error(f"Phase 5.5: Tool {tool_name} failed: {e}")
-                    result = f"Error executing {tool_name}: {e}"
+                else:
+                    consecutive_failures += 1
+                    logger.warning(
+                        f"Phase 5.5 round {round_num + 1}: {tool_name} failed "
+                        f"(consecutive: {consecutive_failures})"
+                    )
 
                 # Append tool result
                 tool_msg = ChatMessage(
                     role=MessageRole.TOOL,
-                    content=str(result),
+                    content=result,
                     tool_call_id=tool_call.id,
                 )
                 messages.append(tool_msg)
                 all_tool_calls.append(tool_call)
 
                 # Status: step done
+                status_icon = "✅" if success else "❌"
                 yield StreamChunk(
                     content="",
-                    status=f"📋 {step_label}: {tool_name} ✅",
+                    status=f"📋 {step_label}: {tool_name} {status_icon}",
                     done=False,
                 )
 
@@ -577,8 +700,13 @@ class AgenticEngine:
             synthesis_content += chunk.content
             if chunk.usage:
                 last_usage = chunk.usage
+            # YIELD EACH CHUNK IMMEDIATELY (Fix for response silence)
+            yield chunk
 
-        yield StreamChunk(content=synthesis_content, done=True, usage=last_usage)
+        # Send final done chunk if not already sent by provider
+        if not synthesis_content.strip():
+             yield StreamChunk(content="No further information found.", done=True, usage=last_usage)
+
         logger.info(
             f"Phase 5.5: Force-synthesized after {round_num + 1} rounds, "
             f"{time.time() - start_time:.1f}s"
@@ -588,17 +716,24 @@ class AgenticEngine:
     # Agentic System Prompt
     # ------------------------------------------------------------------ #
 
-    def _get_agentic_system_prompt(self, plan: List[str], tools: List[Dict[str, Any]]) -> str:
+    def _get_agentic_system_prompt(self, plan: List[str], tools: List[Dict[str, Any]], language: str = "ENGLISH") -> str:
         """Build the agentic system prompt with plan and tool discipline."""
         tool_names = [t["function"]["name"] for t in tools]
         tools_list = ", ".join(tool_names) if tool_names else "none"
         plan_text = "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(plan))
+        
+        lang_instruction = "You MUST respond in English."
+        if language == "THAI":
+             lang_instruction = "You MUST respond in Thai (ภาษาไทย)."
+        elif language == "JAPANESE":
+             lang_instruction = "You MUST respond in Japanese (日本語)."
 
         return (
             "--- AGENTIC MODE (Phase 5.5) ---\n"
             "You are solving a complex task step by step.\n\n"
             f"YOUR PLAN:\n{plan_text}\n\n"
             "RULES:\n"
+            f"0. LANGUAGE: {lang_instruction} Do not switch to other languages.\n"
             "1. Execute ONE step at a time. Call the appropriate tool for the current step.\n"
             "2. Use ONLY these tools: " + tools_list + ". Do NOT invent tool names.\n"
             "3. After each tool result, evaluate what you learned.\n"
