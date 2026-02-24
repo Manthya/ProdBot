@@ -19,6 +19,7 @@ from chatbot_ai_system.models.schemas import (
     StreamChunk,
     ToolCall,
 )
+from chatbot_ai_system.personal.constants import get_hitl_tool_names
 
 logger = logging.getLogger(__name__)
 
@@ -566,6 +567,16 @@ class AgenticEngine:
                 tool_calls=current_tool_calls,
             )
             messages.append(assistant_msg)
+
+            hitl_tools = set(get_hitl_tool_names())
+            if any(tc.function.name in hitl_tools for tc in current_tool_calls):
+                yield StreamChunk(
+                    content="",
+                    status="Awaiting your confirmation...",
+                    tool_calls=current_tool_calls,
+                    done=False,
+                )
+                return
 
             for tool_call in current_tool_calls:
                 tool_name = tool_call.function.name

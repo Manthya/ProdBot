@@ -42,6 +42,8 @@ class SettingsManager:
         elif key == "mcp_servers":
              # Value should be a list of MCPServerConfig-like dicts
              await self._validate_mcp_configs(value)
+        elif key == "personal_integrations":
+            await self._validate_personal_integrations(value)
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(SystemSetting).where(SystemSetting.key == key))
@@ -85,6 +87,18 @@ class SettingsManager:
             for field in required:
                 if field not in config:
                     raise ValueError(f"MCP config for '{config.get('name', 'unknown')}' missing required field: {field}")
+
+    async def _validate_personal_integrations(self, value: Dict[str, Any]):
+        """Validate personal integrations config."""
+        if not isinstance(value, dict):
+            raise ValueError("personal_integrations must be a dict")
+        for platform, cfg in value.items():
+            if not isinstance(cfg, dict):
+                raise ValueError(f"personal_integrations.{platform} must be a dict")
+            if "fields" in cfg and not isinstance(cfg["fields"], dict):
+                raise ValueError(f"personal_integrations.{platform}.fields must be a dict")
+            if "permissions" in cfg and not isinstance(cfg["permissions"], dict):
+                raise ValueError(f"personal_integrations.{platform}.permissions must be a dict")
 
     async def get_available_ollama_models(self) -> List[str]:
         """Fetch models installed on the Ollama host."""

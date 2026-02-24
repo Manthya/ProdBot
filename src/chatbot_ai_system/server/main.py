@@ -1,6 +1,7 @@
 """Main FastAPI application."""
 
 import logging
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,7 @@ from chatbot_ai_system.database.redis import redis_client
 
 from .multimodal_routes import router as multimodal_router
 from .plugin_routes import router as plugin_router
+from .personal_routes import router as personal_router
 from .routes import router
 
 # Configure logging
@@ -47,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(multimodal_router)  # Phase 5.0: Upload, Voice
     app.include_router(plugin_router)  # Plugin management
+    app.include_router(personal_router)  # Personal assistant integrations
 
     # Initialize Prometheus Instrumentation
     Instrumentator().instrument(app).expose(app)
@@ -96,12 +99,12 @@ def create_app() -> FastAPI:
             except Exception as e:
                 logger.error(f"Failed to register MCP server {server_config.name}: {e}")
 
-        # Refresh tools
+        # Refresh tools (background to avoid blocking startup)
         try:
-            await registry.refresh_remote_tools()
-            logger.info("MCP servers registered and tools refreshed")
+            asyncio.create_task(registry.refresh_remote_tools())
+            logger.info("MCP servers registered; tool refresh running in background")
         except Exception as e:
-            logger.error(f"Error refreshing MCP tools: {e}")
+            logger.error(f"Error starting MCP tool refresh: {e}")
 
     @app.on_event("shutdown")
     async def shutdown_event():

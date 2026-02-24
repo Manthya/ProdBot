@@ -35,6 +35,7 @@ from chatbot_ai_system.observability.metrics import (
 from chatbot_ai_system.providers.base import BaseLLMProvider
 from chatbot_ai_system.services.agentic_engine import AgenticEngine
 from chatbot_ai_system.services.embedding import EmbeddingService
+from chatbot_ai_system.personal.constants import get_hitl_tool_names
 from chatbot_ai_system.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -422,6 +423,38 @@ class ChatOrchestrator:
 
         # --- Phase 7: Tool Execution ---
         if current_tool_calls:
+            hitl_tools = set(get_hitl_tool_names())
+            if any(tc.function.name in hitl_tools for tc in current_tool_calls):
+                assistant_msg = ChatMessage(
+                    role=MessageRole.ASSISTANT,
+                    content=full_content,
+                    tool_calls=current_tool_calls,
+                )
+                messages.append(assistant_msg)
+
+                current_seq += 1
+                await self.conversation_repo.add_message(
+                    conversation_id=conv_uuid,
+                    role=MessageRole.ASSISTANT,
+                    content=full_content,
+                    sequence_number=current_seq,
+                    tool_calls=[t.model_dump() for t in current_tool_calls],
+                    metadata={"model": model, "requires_confirmation": True},
+                    token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
+                    token_count_completion=self.last_usage.completion_tokens
+                    if self.last_usage
+                    else None,
+                    model=model,
+                )
+
+                yield StreamChunk(
+                    content="",
+                    status="Awaiting your confirmation...",
+                    tool_calls=current_tool_calls,
+                    done=False,
+                )
+                return
+
             # Append assistant message with tool calls
             assistant_msg = ChatMessage(
                 role=MessageRole.ASSISTANT, content=full_content, tool_calls=current_tool_calls

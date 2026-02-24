@@ -218,6 +218,36 @@ export default function Home() {
         }
     }
 
+    const sendDraft = async (toolCall: any, updatedArgs: Record<string, any>) => {
+        if (!conversationId) return
+        try {
+            setStatusMessage('Sending...')
+            const res = await fetch(`${API_URL}/api/personal/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    tool_name: toolCall.function.name,
+                    arguments: updatedArgs,
+                }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data?.detail || 'Send failed')
+            }
+            setMessages(prev => [
+                ...prev,
+                { role: 'tool', content: String(data.result) },
+                { role: 'assistant', content: `Sent via ${toolCall.function.name}.` },
+            ])
+        } catch (err) {
+            console.error(err)
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to send message.' }])
+        } finally {
+            setStatusMessage('')
+        }
+    }
+
     const handleUpload = async (file: File) => {
         const result = await uploadFile(file)
         if (result) {
@@ -248,7 +278,12 @@ export default function Home() {
             <div className="flex-1 flex flex-col min-w-0 relative">
                 {activeTab === 'chats' ? (
                     <>
-                        <ChatArea messages={messages} isLoading={isLoading} statusMessage={statusMessage} />
+                        <ChatArea
+                            messages={messages}
+                            isLoading={isLoading}
+                            statusMessage={statusMessage}
+                            onSendDraft={sendDraft}
+                        />
 
                         {/* Input Area */}
                         <div className="p-4 bg-transparent">

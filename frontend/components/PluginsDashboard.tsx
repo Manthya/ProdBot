@@ -33,6 +33,13 @@ interface AddModelResult {
     details: string[]
 }
 
+interface PersonalStatusResponse {
+    enabled: Record<string, boolean>
+    integrations: Record<string, any>
+    schemas: Record<string, { fields: Array<{ key: string; label: string; placeholder?: string; required: string }> }>
+    status: Record<string, { enabled: boolean; configured: boolean }>
+}
+
 // ─── Component ───
 export const PluginsDashboard: React.FC = () => {
     const [status, setStatus] = useState<PluginStatus | null>(null)
@@ -55,6 +62,14 @@ export const PluginsDashboard: React.FC = () => {
     const [verifying, setVerifying] = useState(false)
     const [verifyResult, setVerifyResult] = useState<AddModelResult | null>(null)
 
+    const [personalStatus, setPersonalStatus] = useState<PersonalStatusResponse | null>(null)
+    const [personalLoading, setPersonalLoading] = useState(false)
+    const [personalError, setPersonalError] = useState<string | null>(null)
+    const [personalPlatform, setPersonalPlatform] = useState<'gmail' | 'telegram' | 'linkedin' | null>(null)
+    const [personalTab, setPersonalTab] = useState<'overview' | 'connect' | 'permissions'>('overview')
+    const [connectFields, setConnectFields] = useState<Record<string, string>>({})
+    const [connectResult, setConnectResult] = useState<string | null>(null)
+
     const fetchStatus = useCallback(async () => {
         try {
             setLoading(true)
@@ -71,6 +86,23 @@ export const PluginsDashboard: React.FC = () => {
     }, [])
 
     useEffect(() => { fetchStatus() }, [fetchStatus])
+
+    const fetchPersonalStatus = useCallback(async () => {
+        try {
+            setPersonalLoading(true)
+            const res = await fetch(`${API_URL}/api/personal/status`)
+            if (!res.ok) throw new Error(`Status ${res.status}`)
+            const data = await res.json()
+            setPersonalStatus(data)
+            setPersonalError(null)
+        } catch (e: any) {
+            setPersonalError(e.message || 'Failed to load personal assistant status')
+        } finally {
+            setPersonalLoading(false)
+        }
+    }, [])
+
+    useEffect(() => { fetchPersonalStatus() }, [fetchPersonalStatus])
 
     const resetModal = () => {
         setShowAddModal(false)
@@ -94,6 +126,45 @@ export const PluginsDashboard: React.FC = () => {
         // Note: API Key and Base URL are not retrieved from status, we keep defaults or empty
         setModalStep(2)
         setShowAddModal(true)
+    }
+
+    const selectPersonalPlatform = (platform: 'gmail' | 'telegram' | 'linkedin') => {
+        setPersonalPlatform(platform)
+        setPersonalTab('overview')
+        const fields = personalStatus?.integrations?.[platform]?.fields || {}
+        setConnectFields(fields)
+        setConnectResult(null)
+    }
+
+    const updateConnectField = (key: string, value: string) => {
+        setConnectFields(prev => ({ ...prev, [key]: value }))
+    }
+
+    const savePermissions = async (platform: string, permissions: Record<string, boolean>) => {
+        await fetch(`${API_URL}/api/personal/integrations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform, permissions }),
+        })
+        await fetchPersonalStatus()
+    }
+
+    const connectPlatform = async () => {
+        if (!personalPlatform) return
+        setConnectResult(null)
+        try {
+            const res = await fetch(`${API_URL}/api/personal/connect`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ platform: personalPlatform, fields: connectFields }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data?.detail || 'Connect failed')
+            setConnectResult(data.next_step_command || 'Saved')
+            await fetchPersonalStatus()
+        } catch (e: any) {
+            setConnectResult(e.message || 'Connect failed')
+        }
     }
 
     const handleAddModel = async () => {
@@ -249,6 +320,122 @@ export const PluginsDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Personal Assistant Section */}
+            {(personalStatus?.enabled?.gmail || personalStatus?.enabled?.telegram || personalStatus?.enabled?.linkedin) && (
+                <div className="mt-10 p-6 rounded-2xl bg-brand-surface border border-white/5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Wrench className="w-5 h-5 text-brand-accent" />
+                        <h3 className="text-lg font-semibold text-white">Personal Assistant</h3>
+                        {personalLoading && <Loader2 className="w-4 h-4 text-brand-grey animate-spin" />}
+                    </div>
+                    {personalError && (
+                        <div className="mb-4 text-xs text-red-400">{personalError}</div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(['gmail', 'telegram', 'linkedin'] as const).map((platform) => {
+                            const enabled = personalStatus?.enabled?.[platform]
+                            if (!enabled) return null
+                            const configured = personalStatus?.status?.[platform]?.configured
+                            return (
+                                <button
+                                    key={platform}
+                                    onClick={() => selectPersonalPlatform(platform)}
+                                    className={`text-left p-4 rounded-xl border transition-all ${
+                                        personalPlatform === platform
+                                            ? 'border-brand-accent/50 bg-brand-accent/10'
+                                            : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                                    }`}
+                                >
+                                    <div className="text-sm font-semibold text-white capitalize">{platform}</div>
+                                    <div className="text-xs text-brand-grey mt-1">
+                                        {configured ? 'Configured' : 'Not configured'}
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {personalPlatform && (
+                        <div className="mt-6 border-t border-white/5 pt-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                {(['overview', 'connect', 'permissions'] as const).map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setPersonalTab(tab)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider ${
+                                            personalTab === tab
+                                                ? 'bg-brand-accent text-white'
+                                                : 'bg-white/5 text-brand-grey hover:text-white'
+                                        }`}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {personalTab === 'overview' && (
+                                <div className="text-sm text-brand-grey">
+                                    Configure {personalPlatform} to enable personal assistant tools.
+                                </div>
+                            )}
+
+                            {personalTab === 'connect' && (
+                                <div className="space-y-4">
+                                    {(personalStatus?.schemas?.[personalPlatform]?.fields || []).map((field) => (
+                                        <div key={field.key}>
+                                            <label className="block text-xs text-brand-grey uppercase tracking-wider mb-1.5 font-bold">
+                                                {field.label}
+                                            </label>
+                                            <input
+                                                value={connectFields[field.key] || ''}
+                                                onChange={(e) => updateConnectField(field.key, e.target.value)}
+                                                placeholder={field.placeholder || ''}
+                                                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all"
+                                            />
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={connectPlatform}
+                                        className="px-4 py-2.5 rounded-xl bg-brand-accent text-white text-sm font-medium hover:bg-brand-accent/80 transition-all"
+                                    >
+                                        Save & Connect
+                                    </button>
+                                    {connectResult && (
+                                        <div className="text-xs text-brand-grey break-words">
+                                            <div className="mb-1">Next step:</div>
+                                            <pre className="whitespace-pre-wrap break-words text-brand-lighter font-mono bg-black/30 p-3 rounded-lg">
+                                                {connectResult}
+                                            </pre>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {personalTab === 'permissions' && (
+                                <div className="space-y-3">
+                                    {(['read', 'draft', 'send'] as const).map((perm) => {
+                                        const currentPerms = personalStatus?.integrations?.[personalPlatform]?.permissions || {}
+                                        const isOn = Boolean(currentPerms[perm])
+                                        return (
+                                            <label key={perm} className="flex items-center gap-3 text-sm text-brand-grey">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isOn}
+                                                    onChange={(e) =>
+                                                        savePermissions(personalPlatform, { [perm]: e.target.checked })
+                                                    }
+                                                />
+                                                <span className="capitalize">{perm}</span>
+                                            </label>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* ─── ADD MODEL MODAL ─── */}
             {showAddModal && (

@@ -49,13 +49,14 @@ The `IdentityResolutionService` will map natural language names to platform IDs:
 
 ## 5. UI & UX Specifications
 
-### 5.1 Integrations Dashboard
-A new "Integrations" tab in the Settings UI will display:
-*   **Connection Status:** (e.g., Gmail: Connected, Telegram: Login Required).
-*   **Granular Toggles:**
-    *   `[ ] Read Access` - Allow bot to search and read context.
-    *   `[ ] Write Access` - Allow bot to create drafts.
-    *   `[ ] Autonomous Mode (Advanced)` - Allow sending without confirmation (Off by default).
+### 5.1 Plugins Tab Integration
+The "Personal Assistant" configuration will be integrated directly into the existing **Plugins Dashboard**.
+*   **Access Pattern:** User navigates to the `Plugins` tab. Clicking on a specific platform plugin (e.g., Gmail) opens a detailed settings view.
+*   **Multi-Tab detailed view:**
+    *   **Tab 1: Overview** - Status and general info.
+    *   **Tab 2: Connect** - Connection logic (QR scan, OAuth button).
+    *   **Tab 3: Permissions** - Granular control over `Read`, `Draft`, and `Send` capabilities.
+*   **Guardrails:** The chatbot orchestrator will check these permissions before attempting any tool call.
 
 ### 5.2 The "Draft Card" Component
 When the bot proposes a message, it renders a custom React component in the chat thread:
@@ -99,7 +100,15 @@ graph TD
 
 ---
 
-## 7. Safety & Maintenance
+## 7. Deployment & Safety
+
+### 7.1 Feature Flags
+To ensure zero regressions in the production chatbot, all Personal Assistant features will be gated behind **Feature Flags**:
+*   `ENABLE_PERSONAL_GMAIL`: Controls visibility of Gmail tools and UI.
+*   `ENABLE_PERSONAL_TELEGRAM`: Controls visibility of Telegram tools and UI.
+*   **Default State:** All flags are `OFF` in the main branch until stable.
+
+### 7.2 Safety & Maintenance
 *   **Rate Limiting:** All "Puppet" tools will include randomized delays (2-5 seconds) to mimic human behavior and avoid platform bans.
 *   **Session Refresh:** The system must detect when an MCP session expires (e.g., Telegram logout) and prompt the user via the UI to re-authenticate (e.g., "Scan QR Code for Telegram").
 *   **Context Truncation:** Automatic stripping of HTML, headers, and signatures before passing data to the LLM to save tokens and improve reasoning quality.

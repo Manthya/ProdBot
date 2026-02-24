@@ -24,6 +24,10 @@ mcp = "^1.20.0"
 prometheus-client = "^0.19.0"
 alembic = "^1.13.0"
 duckduckgo-search = "^5.0.0"
+pillow = "^10.4.0"
+pydub = "^0.25.1"
+faster-whisper = "^1.0.3"
+opencv-python-headless = "^4.10.0.84"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
