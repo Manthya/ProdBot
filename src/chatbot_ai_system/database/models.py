@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 from pgvector.sqlalchemy import Vector
@@ -18,7 +18,7 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
     username: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     conversations: Mapped[List["Conversation"]] = relationship(back_populates="user")
@@ -32,9 +32,9 @@ class Conversation(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_archived: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True
+        DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), index=True
     )
 
     # Layer 2 Memory: Summarization (Phase 2.7)
@@ -76,7 +76,7 @@ class Message(Base):
     embedding: Mapped[Optional[List[float]]] = mapped_column(Vector(768), nullable=True)
 
     sequence_number: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
     attachments: Mapped[List["MediaAttachment"]] = relationship(
@@ -100,7 +100,7 @@ class MediaAttachment(Base):
     duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     width: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     height: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     message: Mapped["Message"] = relationship(back_populates="attachments")
 
@@ -112,7 +112,7 @@ class Memory(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     content: Mapped[str] = mapped_column(Text)
     context: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    last_accessed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_accessed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user: Mapped["User"] = relationship(back_populates="memories")
 class SystemSetting(Base):
@@ -124,5 +124,5 @@ class SystemSetting(Base):
     value: Mapped[Any] = mapped_column(JSONB)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )

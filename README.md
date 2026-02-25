@@ -300,14 +300,17 @@ TTS_VOICE=en_US-lessac-medium
 ## 🧪 Testing
 
 ```bash
-# Verify MCP integration and tool execution
-python scripts/test_mcp_capabilities.py
+# Fast safety regression (no external APIs required)
+PYTHONPATH=src .venv/bin/pytest tests/redteam -q
 
-# Verify multimodal pipeline (image, audio, TTS, vision model)
-python scripts/test_multimodal.py
+# Behavioral benchmark (mock trajectory mode)
+PYTHONPATH=src .venv/bin/python tests/evals/run_benchmarks.py
 
-# Verify performance and query routing (Phase 5.5)
-python scripts/verify_phase_5_5_real.py
+# Optional live API pipeline check (backend + Ollama running)
+PYTHONPATH=src .venv/bin/python tests/test_all_pipelines.py
+
+# Optional multimodal live check (backend + Ollama + FFmpeg)
+PYTHONPATH=src .venv/bin/python tests/test_media_pipeline.py
 ```
 
 ---

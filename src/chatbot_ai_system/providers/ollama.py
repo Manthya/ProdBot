@@ -2,6 +2,7 @@
 
 import logging
 import time
+import uuid
 from typing import AsyncGenerator, List, Optional
 
 import httpx
@@ -111,15 +112,6 @@ class OllamaProvider(BaseLLMProvider):
             # Next, try to find a code block containing JSON
             code_block_pattern = r"```(?:json)?\s*(\{.*?\})\s*```"
             matches = re.findall(code_block_pattern, content, re.DOTALL)
-
-            if not matches:
-                # Try to find raw JSON object in the text if no code block
-                # Non-greedy match for { ... }
-                # We expect "name": "..." and "arguments" (or "parameters"): { ... }
-                raw_pattern = (
-                    r"(\{.*?\"name\"\s*:\s*\".*?\".*?\"(arguments|parameters)\"\s*:\s*\{.*?\}.*?\})"
-                )
-                matches = [m[0] for m in re.findall(raw_pattern, content, re.DOTALL)]
 
             tool_calls = []
             for match in matches:

@@ -9,6 +9,7 @@ Plan + ReAct hybrid for complex multi-step tasks.
 """
 
 import asyncio
+import json
 import logging
 import time
 from typing import Any, AsyncGenerator, Dict, List, Tuple
@@ -30,6 +31,19 @@ MAX_TOOLS_AGENTIC = 8  # Tool count cap (slightly higher than one-shot's 5)
 MAX_TOOL_RETRIES = 2  # Fix 2.1: Per-tool retry limit
 PER_TOOL_TIMEOUT_SEC = 30  # Fix 2.1: Per-tool execution timeout
 MAX_CONSECUTIVE_FAILURES = 2  # Fix 2.2: Circuit breaker threshold
+MAX_TOOL_RESULT_CHARS = 50_000  # Keep tool feedback bounded for synthesis stability
+SIMULATION_MARKERS = (
+    "simulate",
+    "simulated",
+    "assuming",
+    "assume",
+    "no direct tool",
+    "no tool provided",
+    "i don't have the capability",
+    "i do not have the capability",
+    "i can't access",
+    "i cannot access",
+)
 
 
 class AgenticEngine:
@@ -81,7 +95,7 @@ class AgenticEngine:
                     tool.run(**tool_args),
                     timeout=PER_TOOL_TIMEOUT_SEC,
                 )
-                return (str(result), True)
+                return (self._prepare_tool_result(tool_name, result), True)
             except asyncio.TimeoutError:
                 logger.warning(
                     f"Tool {tool_name} timeout (attempt {attempt + 1}/{MAX_TOOL_RETRIES})"
@@ -98,6 +112,31 @@ class AgenticEngine:
             f"and answer using your internal knowledge, clearly stating what "
             f"you could not verify.",
             False,
+        )
+
+    def _prepare_tool_result(self, tool_name: str, result: Any) -> str:
+        """Serialize and cap tool output to avoid oversized context payloads."""
+        if isinstance(result, str):
+            text = result
+        else:
+            try:
+                text = json.dumps(result, ensure_ascii=False, default=str)
+            except Exception:
+                text = str(result)
+
+        if len(text) <= MAX_TOOL_RESULT_CHARS:
+            return text
+
+        head_chars = MAX_TOOL_RESULT_CHARS // 2
+        tail_chars = MAX_TOOL_RESULT_CHARS - head_chars
+        removed_chars = len(text) - (head_chars + tail_chars)
+        logger.warning(
+            "Truncated agentic tool output for %s from %s chars", tool_name, len(text)
+        )
+        return (
+            f"{text[:head_chars]}\n\n"
+            f"[TRUNCATED {removed_chars} chars from tool output '{tool_name}']\n\n"
+            f"{text[-tail_chars:]}"
         )
 
     # ------------------------------------------------------------------ #
@@ -313,6 +352,17 @@ class AgenticEngine:
         # Default to English
         return "ENGLISH"
 
+    def _contains_simulation_language(self, text: str) -> bool:
+        low = (text or "").lower()
+        return any(marker in low for marker in SIMULATION_MARKERS)
+
+    def _fail_closed_message(self, reason: str, tools: List[Dict[str, Any]]) -> str:
+        tool_names = ", ".join(t["function"]["name"] for t in tools[:8]) if tools else "none"
+        return (
+            "I can't verify this result reliably from executed tool outputs, "
+            f"so I won't simulate an answer. Reason: {reason}. Available tools: {tool_names}."
+        )
+
     # ------------------------------------------------------------------ #
     # Tool Expansion
     # ------------------------------------------------------------------ #
@@ -449,6 +499,7 @@ class AgenticEngine:
         total_steps = len(plan)
         round_num = 0
         all_tool_calls = []  # Track for persistence
+        successful_tool_calls: List[str] = []
 
         # Fix 2.2: Cycle detection and circuit breaker state
         tool_call_history = set()  # Set of (name, args_hash) tuples
@@ -545,6 +596,22 @@ class AgenticEngine:
 
             # --- No tool calls = LLM produced final answer ---
             if not current_tool_calls:
+                if not successful_tool_calls:
+                    fail_content = self._fail_closed_message(
+                        "No tool was executed successfully in agentic flow",
+                        tools,
+                    )
+                    yield StreamChunk(content=fail_content, done=True, usage=last_usage)
+                    logger.warning("Phase 5.5: fail-closed finalization (no successful tools)")
+                    return
+                if self._contains_simulation_language(full_content):
+                    fail_content = self._fail_closed_message(
+                        "Model produced simulated/unverified language",
+                        tools,
+                    )
+                    yield StreamChunk(content=fail_content, done=True, usage=last_usage)
+                    logger.warning("Phase 5.5: fail-closed finalization (simulated language)")
+                    return
                 step_label = f"Step {current_step + 1}/{total_steps}"
                 yield StreamChunk(
                     content="",
@@ -634,6 +701,7 @@ class AgenticEngine:
                 result, success = await self._execute_tool_with_retry(tool_name, tool_args)
                 if success:
                     consecutive_failures = 0
+                    successful_tool_calls.append(tool_name)
                     logger.info(
                         f"Phase 5.5 round {round_num + 1}: {tool_name} completed"
                     )
@@ -711,12 +779,26 @@ class AgenticEngine:
             synthesis_content += chunk.content
             if chunk.usage:
                 last_usage = chunk.usage
-            # YIELD EACH CHUNK IMMEDIATELY (Fix for response silence)
-            yield chunk
 
         # Send final done chunk if not already sent by provider
+        if not successful_tool_calls:
+            synthesis_content = self._fail_closed_message(
+                "No successful tools before forced synthesis",
+                tools,
+            )
+            yield StreamChunk(content=synthesis_content, done=True, usage=last_usage)
+            return
+        if self._contains_simulation_language(synthesis_content):
+            synthesis_content = self._fail_closed_message(
+                "Forced synthesis contained simulated/unverified language",
+                tools,
+            )
+            yield StreamChunk(content=synthesis_content, done=True, usage=last_usage)
+            return
         if not synthesis_content.strip():
-             yield StreamChunk(content="No further information found.", done=True, usage=last_usage)
+            yield StreamChunk(content="No further information found.", done=True, usage=last_usage)
+        else:
+            yield StreamChunk(content=synthesis_content, done=True, usage=last_usage)
 
         logger.info(
             f"Phase 5.5: Force-synthesized after {round_num + 1} rounds, "

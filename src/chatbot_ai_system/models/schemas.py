@@ -1,7 +1,7 @@
 """Pydantic schemas for the chatbot API."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -50,7 +50,7 @@ class ChatMessage(BaseModel):
     attachments: Optional[List[MediaAttachment]] = None  # Phase 5.0: multimodal
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -113,7 +113,7 @@ class HealthResponse(BaseModel):
     status: str = "healthy"
     version: str
     providers: Dict[str, bool] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ErrorResponse(BaseModel):
