@@ -396,7 +396,10 @@ chatbot-ai-systems-production/
 - [x] **Phase 6.5**: Free Tool Integration (Web Search & Coding) — [Docs](docs/phase_6.5.md)
 - [x] **Phase 7.0**: Model Integration & System Hardening — [Docs](docs/phase_7.0.md)
 - [x] **Phase 7.1**: Production Hardening — Deep Audit & 12 Critical Fixes — [Docs](docs/phase_7.1.md)
-- [ ] **Phase 8.0**: Authentication & Multi-Tenancy
+- [x] **Phase 8.0 & 8.1**: Comprehensive Testing, Red-Team & Behavioral Benchmarks — [Docs](docs/phase8.0_testing.md)
+- [x] **Phase 9.0**: Personal Platform Integration (Gmail/Telegram/LinkedIn) — [Docs](docs/phase9.0.md)
+- [x] **Phase 9.1**: Stabilization & Functional Evaluation — [Docs](docs/phase8.0_testing.md)
+- [ ] **Phase 10.0**: Authentication & Multi-Tenancy
 
 ---
 

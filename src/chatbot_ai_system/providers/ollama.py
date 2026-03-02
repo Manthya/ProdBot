@@ -63,7 +63,7 @@ class OllamaProvider(BaseLLMProvider):
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=httpx.Timeout(120.0, connect=10.0),
+                timeout=httpx.Timeout(300.0, connect=10.0),
                 limits=httpx.Limits(
                     max_connections=20,
                     max_keepalive_connections=10,
