@@ -1,0 +1,37 @@
+name: Phase10 Orchestrator Evals
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  phase10-evals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Phase10 Cases
+        run: |
+          python tests/evals/generate_phase10_cases.py
+
+      - name: Run Phase10 Mock Evals
+        run: |
+          PYTHONPATH=src python tests/evals/run_phase10_orchestrator_eval.py
+
+      - name: Check Pass Rate
+        env:
+          PHASE10_MIN_PASS: "0.95"
+        run: |
+          python tests/evals/check_phase10_report.py

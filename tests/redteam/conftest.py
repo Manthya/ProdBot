@@ -71,6 +71,24 @@ class MockLLMProvider(BaseLLMProvider):
         self.complete_call_count += 1
         self.last_complete_messages = messages
         
+        # Determine routing if it looks like a router prompt
+        if messages and (
+            "routing classifier" in messages[0].content.lower()
+            or "json object for routing" in messages[0].content.lower()
+        ):
+            resp = MagicMock()
+            resp.message.content = (
+                "{"
+                "\"phase\": \"GENERAL\", "
+                "\"tool_required\": false, "
+                "\"tool_domains\": [], "
+                "\"expected_tool_calls\": 0, "
+                "\"confidence\": 0.7, "
+                "\"need_clarification\": false"
+                "}"
+            )
+            return resp
+
         # Determine intent/complexity if it looks like a classifier prompt
         if messages and "You are a query analyzer" in messages[0].content:
             if callable(self.mock_complete_response):
@@ -216,4 +234,3 @@ def patched_app(mock_provider, mock_db_session, mock_conversation_repo, mock_mem
 def test_client(patched_app):
     """Returns a TestClient wrapping the patched FastAPI app."""
     return TestClient(patched_app)
-

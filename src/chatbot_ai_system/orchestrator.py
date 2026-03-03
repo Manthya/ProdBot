@@ -38,6 +38,7 @@ from chatbot_ai_system.observability.metrics import (
 from chatbot_ai_system.providers.base import BaseLLMProvider
 from chatbot_ai_system.services.agentic_engine import AgenticEngine
 from chatbot_ai_system.services.embedding import EmbeddingService
+from chatbot_ai_system.services.tool_reliability import tool_reliability_store
 from chatbot_ai_system.personal.constants import get_hitl_tool_names
 from chatbot_ai_system.tools.registry import ToolRegistry
 
@@ -48,6 +49,65 @@ TRIVIAL_PATTERNS = re.compile(
     r'^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|good|great|bye|'
     r'what is your name|who are you|how are you)[!?.\s]*$',
     re.IGNORECASE
+)
+
+# Router configuration
+ROUTER_MAX_TOKENS = 220
+ROUTER_STRICT_MAX_TOKENS = 160
+ROUTER_LOW_CONFIDENCE_THRESHOLD = 0.35
+
+# Deterministic pre-router (strict patterns only)
+TIME_STRICT_PATTERNS = [
+    re.compile(r"^\s*what(?:'s| is)? the time\b", re.IGNORECASE),
+    re.compile(r"^\s*what time is it\b", re.IGNORECASE),
+    re.compile(r"\bcurrent time\b", re.IGNORECASE),
+    re.compile(r"\btime now\b", re.IGNORECASE),
+    re.compile(r"\btime in\s+[a-z]", re.IGNORECASE),
+    re.compile(r"\butc time\b", re.IGNORECASE),
+    re.compile(r"\btimezone\b", re.IGNORECASE),
+    re.compile(r"\btimestamp\b", re.IGNORECASE),
+]
+
+GIT_STRICT_PATTERNS = [
+    re.compile(r"\bgit\s+(status|diff|log|branch|checkout|commit|rebase|merge)\b", re.IGNORECASE),
+    re.compile(r"^\s*git\s+", re.IGNORECASE),
+]
+
+FETCH_STRICT_PATTERNS = [
+    re.compile(r"\bhttps?://\S+\b", re.IGNORECASE),
+    re.compile(r"\b(fetch|browse|open)\s+https?://", re.IGNORECASE),
+    re.compile(r"\b(search the web|look up|find online)\b", re.IGNORECASE),
+]
+
+FILE_ACTION_VERBS = ("read", "open", "show", "list", "write", "create", "delete", "remove", "edit", "update")
+FILE_NOUNS = ("file", "files", "folder", "folders", "directory", "directories", "path", "paths")
+FILE_MARKERS = ("/", "./", "../", ".py", ".md", ".txt", ".json", ".yaml", ".yml", ".csv", ".toml", ".ini")
+
+HIGH_RISK_TOOL_PREFIXES = (
+    "delete",
+    "remove",
+    "write",
+    "send",
+    "post",
+    "execute",
+    "run",
+    "update",
+    "insert",
+    "drop",
+    "create",
+    "deploy",
+)
+
+MULTI_STEP_MARKERS = (
+    " and ",
+    " then ",
+    " after ",
+    " before ",
+    " compare ",
+    " analyze ",
+    " summarize ",
+    " investigate ",
+    " research ",
 )
 
 # Guardrail: Prevent multi-MB tool payloads from stalling synthesis or bloating DB rows.
@@ -118,6 +178,399 @@ class ChatOrchestrator:
         if not text:
             return 0
         return len(text) // 4
+
+    def _pre_router_deterministic(self, user_input: str) -> Optional[Dict[str, Any]]:
+        """Deterministic router with strict patterns to avoid false positives."""
+        text = user_input.strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if any(marker in lowered for marker in MULTI_STEP_MARKERS):
+            return None
+
+        for pattern in TIME_STRICT_PATTERNS:
+            if pattern.search(lowered):
+                return {
+                    "phase": "MEDIUM",
+                    "tool_required": True,
+                    "tool_domains": ["time"],
+                    "expected_tool_calls": 1,
+                    "confidence": 0.95,
+                    "need_clarification": False,
+                    "source": "deterministic_time",
+                }
+
+        for pattern in GIT_STRICT_PATTERNS:
+            if pattern.search(lowered):
+                return {
+                    "phase": "MEDIUM",
+                    "tool_required": True,
+                    "tool_domains": ["git"],
+                    "expected_tool_calls": 1,
+                    "confidence": 0.92,
+                    "need_clarification": False,
+                    "source": "deterministic_git",
+                }
+
+        for pattern in FETCH_STRICT_PATTERNS:
+            if pattern.search(lowered):
+                return {
+                    "phase": "MEDIUM",
+                    "tool_required": True,
+                    "tool_domains": ["fetch"],
+                    "expected_tool_calls": 1,
+                    "confidence": 0.9,
+                    "need_clarification": False,
+                    "source": "deterministic_fetch",
+                }
+
+        if any(v in lowered for v in FILE_ACTION_VERBS) and (
+            any(n in lowered for n in FILE_NOUNS) or any(m in lowered for m in FILE_MARKERS)
+        ) and not any(p.search(lowered) for p in FETCH_STRICT_PATTERNS):
+            return {
+                "phase": "MEDIUM",
+                "tool_required": True,
+                "tool_domains": ["filesystem"],
+                "expected_tool_calls": 1,
+                "confidence": 0.9,
+                "need_clarification": False,
+                "source": "deterministic_filesystem",
+            }
+
+        if "sqlite" in lowered or (
+            any(k in lowered for k in ("select ", "insert ", "update ", "delete ", "create table"))
+            and "table" in lowered
+        ):
+            return {
+                "phase": "MEDIUM",
+                "tool_required": True,
+                "tool_domains": ["sqlite"],
+                "expected_tool_calls": 1,
+                "confidence": 0.85,
+                "need_clarification": False,
+                "source": "deterministic_sqlite",
+            }
+
+        return None
+
+    def _build_router_prompt(self, user_input: str, tool_domains: List[str]) -> List[ChatMessage]:
+        domain_list = ", ".join(tool_domains) if tool_domains else "none"
+        prompt = (
+            "You are a routing classifier for a local assistant. Output ONLY JSON, no prose.\n"
+            "Keys:\n"
+            "  phase: GENERAL | MEDIUM | COMPLEX\n"
+            "  tool_required: true/false\n"
+            "  tool_domains: array of tool domains from this list: "
+            f"{domain_list}\n"
+            "  expected_tool_calls: 0 | 1 | 2\n"
+            "  confidence: 0.0 - 1.0\n"
+            "  need_clarification: true/false\n\n"
+            "Guidelines:\n"
+            "- GENERAL: knowledge-only or casual chat\n"
+            "- MEDIUM: one tool call or short single-step answer\n"
+            "- COMPLEX: multi-step with dependencies\n"
+            "- tool_domains must be empty if tool_required=false\n"
+        )
+        return [
+            ChatMessage(role=MessageRole.SYSTEM, content=prompt),
+            ChatMessage(role=MessageRole.USER, content=user_input),
+        ]
+
+    def _parse_router_response(self, text: str) -> Optional[Dict[str, Any]]:
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+
+        match = re.search(r"\\{.*\\}", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except Exception:
+                pass
+
+        # Fallback: parse line-by-line "key: value"
+        parsed: Dict[str, Any] = {}
+        for line in text.splitlines():
+            if ":" not in line:
+                continue
+            key, val = line.split(":", 1)
+            key = key.strip().lower()
+            val = val.strip()
+            if not key:
+                continue
+            parsed[key] = val
+        return parsed or None
+
+    def _normalize_router_decision(
+        self, raw: Optional[Dict[str, Any]], available_domains: List[str]
+    ) -> Dict[str, Any]:
+        raw = raw or {}
+        phase = str(raw.get("phase", "GENERAL")).upper()
+        if phase not in ("GENERAL", "MEDIUM", "COMPLEX"):
+            phase = "GENERAL"
+
+        tool_required = raw.get("tool_required", False)
+        if isinstance(tool_required, str):
+            tool_required = tool_required.strip().lower() in ("true", "yes", "1")
+        tool_required = bool(tool_required)
+
+        tool_domains = raw.get("tool_domains", [])
+        if isinstance(tool_domains, str):
+            tool_domains = [d.strip() for d in tool_domains.split(",") if d.strip()]
+        tool_domains = [d.lower() for d in tool_domains if isinstance(d, str)]
+        tool_domains = [d for d in tool_domains if d in available_domains]
+
+        expected_tool_calls = raw.get("expected_tool_calls", 0)
+        try:
+            expected_tool_calls = int(expected_tool_calls)
+        except Exception:
+            expected_tool_calls = 0
+        expected_tool_calls = 0 if expected_tool_calls <= 0 else 1 if expected_tool_calls == 1 else 2
+
+        confidence = raw.get("confidence", None)
+        try:
+            confidence = float(confidence) if confidence is not None else None
+        except Exception:
+            confidence = None
+
+        need_clarification = raw.get("need_clarification", False)
+        if isinstance(need_clarification, str):
+            need_clarification = need_clarification.strip().lower() in ("true", "yes", "1")
+        need_clarification = bool(need_clarification)
+
+        if not tool_required:
+            tool_domains = []
+
+        return {
+            "phase": phase,
+            "tool_required": tool_required,
+            "tool_domains": tool_domains,
+            "expected_tool_calls": expected_tool_calls,
+            "confidence": confidence,
+            "need_clarification": need_clarification,
+        }
+
+    def _rule_confidence(self, user_input: str, tool_domains: List[str]) -> float:
+        text = user_input.lower()
+        score = 0.4
+
+        if any(word in text for word in ("current", "now", "list", "show", "status", "fetch", "search", "read", "write")):
+            score += 0.2
+
+        if "?" in text:
+            score += 0.05
+
+        domain_keywords = {
+            "filesystem": ("file", "folder", "directory", "path"),
+            "git": ("git", "commit", "branch", "diff", "status"),
+            "fetch": ("http", "https", "url", "web", "search"),
+            "time": ("time", "timezone", "utc", "timestamp"),
+            "sqlite": ("sql", "sqlite", "table", "select", "insert", "update", "delete"),
+            "memory": ("remember", "recall", "memory"),
+        }
+
+        for domain in tool_domains:
+            keywords = domain_keywords.get(domain, ())
+            if keywords and any(k in text for k in keywords):
+                score += 0.1
+
+        score = max(0.1, min(0.95, score))
+        return score
+
+    async def _route_request(
+        self, user_input: str, model: str, has_media: bool
+    ) -> Dict[str, Any]:
+        """Route request to phase and tool domains with fallbacks for local models."""
+        if has_media:
+            return {
+                "phase": "MEDIUM",
+                "tool_required": False,
+                "tool_domains": [],
+                "expected_tool_calls": 0,
+                "confidence": 0.8,
+                "need_clarification": False,
+                "source": "media",
+            }
+
+        deterministic = self._pre_router_deterministic(user_input)
+        if deterministic:
+            return deterministic
+
+        available_domains = [c.lower() for c in self.registry.get_categories()]
+        if "general" not in available_domains:
+            available_domains.append("general")
+
+        router_messages = self._build_router_prompt(user_input, available_domains)
+        raw_decision = None
+
+        try:
+            response = await self.provider.complete(
+                messages=router_messages,
+                model=model,
+                max_tokens=ROUTER_MAX_TOKENS,
+                temperature=0.1,
+            )
+            raw_decision = self._parse_router_response(response.message.content or "")
+        except Exception as e:
+            logger.warning(f"Router primary parse failed: {e}")
+
+        if not raw_decision:
+            try:
+                strict_messages = [
+                    ChatMessage(
+                        role=MessageRole.SYSTEM,
+                        content="Output ONLY a JSON object for routing. No prose.",
+                    ),
+                    router_messages[-1],
+                ]
+                response = await self.provider.complete(
+                    messages=strict_messages,
+                    model=model,
+                    max_tokens=ROUTER_STRICT_MAX_TOKENS,
+                    temperature=0.0,
+                )
+                raw_decision = self._parse_router_response(response.message.content or "")
+            except Exception as e:
+                logger.warning(f"Router strict retry failed: {e}")
+
+        decision = self._normalize_router_decision(raw_decision, available_domains)
+        rule_conf = self._rule_confidence(user_input, decision["tool_domains"])
+        llm_conf = decision.get("confidence")
+        if llm_conf is None:
+            final_conf = rule_conf
+        else:
+            final_conf = (0.6 * rule_conf) + (0.4 * max(0.0, min(1.0, llm_conf)))
+
+        decision["confidence"] = max(0.0, min(1.0, final_conf))
+        decision["source"] = "router"
+
+        if decision["confidence"] < ROUTER_LOW_CONFIDENCE_THRESHOLD:
+            return {
+                "phase": "GENERAL",
+                "tool_required": False,
+                "tool_domains": [],
+                "expected_tool_calls": 0,
+                "confidence": decision["confidence"],
+                "need_clarification": True,
+                "source": "low_confidence_fallback",
+            }
+
+        return decision
+
+    async def _filter_tools_for_domains(
+        self, tool_domains: List[str], user_input: str, phase: str
+    ) -> List[Dict[str, Any]]:
+        """Select tools for multiple domains, then rank by reliability."""
+        if not tool_domains:
+            return []
+
+        tools: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+
+        def add_tool(tool: Dict[str, Any]) -> None:
+            name = tool["function"]["name"]
+            if name not in seen:
+                tools.append(tool)
+                seen.add(name)
+
+        for domain in tool_domains:
+            cat = domain.upper()
+            if cat == "GENERAL":
+                domain_tools = self.registry.get_tools_by_category("GENERAL")
+            else:
+                domain_tools = self.registry.get_tools_by_category(cat)
+            for tool in domain_tools:
+                add_tool(tool)
+
+        query_tools = await self.registry.get_ollama_tools(query=user_input)
+        local_tools = [t.to_ollama_format() for t in self.registry._tools.values()]
+        for tool in query_tools + local_tools:
+            add_tool(tool)
+
+        cap = 8 if phase == "MEDIUM" else 12
+        tools = tools[:cap]
+        tools = await tool_reliability_store.rank_tools(tools)
+        return tools
+
+    def _should_verify_tool_result(
+        self,
+        tool_name: str,
+        result_text: str,
+        had_error: bool,
+        router_confidence: Optional[float],
+    ) -> bool:
+        if had_error:
+            return True
+        if not result_text or not result_text.strip():
+            return True
+        if len(result_text) > 5000:
+            return True
+        if router_confidence is not None and router_confidence < 0.4:
+            return True
+        if len(result_text) > 5000:
+            return True
+        lowered = tool_name.lower()
+        if lowered in get_hitl_tool_names():
+            return True
+        return lowered.startswith(HIGH_RISK_TOOL_PREFIXES)
+
+    async def _verify_tool_result(
+        self,
+        user_input: str,
+        tool_name: str,
+        tool_args: Dict[str, Any],
+        result_text: str,
+        model: str,
+    ) -> tuple[bool, str]:
+        """Lightweight verification step for high-risk/failed tool results."""
+        excerpt = result_text
+        if len(excerpt) > 2000:
+            excerpt = excerpt[:2000] + "...[truncated]"
+
+        prompt = (
+            "You are a verification assistant. Given the user request and tool result, "
+            "decide if the result is sufficient to answer the user.\n"
+            "Output ONLY JSON: {\"ok\": true/false, \"reason\": \"...\"}\n\n"
+            f"User request: {user_input}\n"
+            f"Tool: {tool_name}\n"
+            f"Tool args: {tool_args}\n"
+            f"Tool result: {excerpt}\n"
+        )
+        try:
+            response = await self.provider.complete(
+                messages=[ChatMessage(role=MessageRole.USER, content=prompt)],
+                model=model,
+                max_tokens=140,
+                temperature=0.0,
+            )
+            parsed = self._parse_router_response(response.message.content or "")
+            if isinstance(parsed, dict):
+                ok_val = parsed.get("ok", True)
+                reason = parsed.get("reason", "")
+                if isinstance(ok_val, str):
+                    ok_val = ok_val.strip().lower() in ("true", "yes", "1")
+                return bool(ok_val), str(reason)
+        except Exception as e:
+            logger.warning(f"Verification step failed: {e}")
+
+        # If verification fails to parse, assume ok unless result is empty.
+        if not result_text or not result_text.strip():
+            return False, "Tool returned empty output."
+        return True, "Verification unavailable."
+
+    def _build_clarification_response(
+        self, reason: str, tools: List[Dict[str, Any]], tool_errors: Optional[List[str]] = None
+    ) -> str:
+        available = ", ".join(t["function"]["name"] for t in tools[:6]) if tools else "none"
+        details = ""
+        if tool_errors:
+            details = f" Tool issues: {', '.join(tool_errors[:3])}."
+        return (
+            "I couldn't verify the tool result well enough to answer safely. "
+            f"Reason: {reason}.{details} Available tools: {available}. "
+            "Could you clarify or provide more specifics?"
+        )
 
     def _serialize_tool_result(self, result: Any) -> str:
         """Serialize tool output to a deterministic string for chat feedback."""
@@ -223,8 +676,17 @@ class ChatOrchestrator:
                 return category
         return None
 
-    def _requires_tool_execution(self, intent: str, user_input: str, tools: List[Dict[str, Any]]) -> bool:
+    def _requires_tool_execution(
+        self,
+        tool_required: bool,
+        user_input: str,
+        tools: List[Dict[str, Any]],
+        intent: str = "GENERAL",
+    ) -> bool:
         """Determine when we should fail-closed if no tool execution occurs."""
+        if tool_required:
+            return True
+
         if intent == "GENERAL":
             return False
 
@@ -429,35 +891,44 @@ class ChatOrchestrator:
 
         # --- Fix 2.3: Fast-path bypass for trivial queries ---
         if TRIVIAL_PATTERNS.match(user_input.strip()):
-            intent, complexity = "GENERAL", "SIMPLE"
+            router_decision = {
+                "phase": "GENERAL",
+                "tool_required": False,
+                "tool_domains": [],
+                "expected_tool_calls": 0,
+                "confidence": 1.0,
+                "need_clarification": False,
+                "source": "trivial",
+            }
             tools = []
             logger.info(f"Fast-path: trivial query bypass for '{user_input[:50]}'")
         else:
-            # --- Phase 4+5.5: Intent + Complexity Classification ---
-            intent, complexity = await self.agentic_engine.classify_intent_and_complexity(
+            router_decision = await self._route_request(
                 user_input, model, has_media=(has_images or has_audio_transcription)
             )
-            available_categories = set(self.registry.get_categories())
-            intent_override = self._infer_intent_override(user_input, available_categories)
-            if intent_override and intent != intent_override:
-                logger.info(
-                    "Phase 4 guard: overriding intent %s -> %s based on query heuristics",
-                    intent,
-                    intent_override,
-                )
-                intent = intent_override
-            logger.info(f"Phase 4: intent='{intent}', complexity='{complexity}'")
-
-            # --- Phase 5: Tool Scope Reduction ---
-            if complexity == "COMPLEX":
-                tools = await self.agentic_engine.get_expanded_tools(intent, user_input)
-            else:
-                tools = await self._filter_tools(intent, user_input)
+            tool_domains = router_decision.get("tool_domains", [])
+            phase = router_decision.get("phase", "GENERAL")
+            tools = await self._filter_tools_for_domains(tool_domains, user_input, phase)
+            logger.info(
+                "Router decision: phase=%s tool_required=%s domains=%s confidence=%.2f",
+                phase,
+                router_decision.get("tool_required"),
+                tool_domains,
+                router_decision.get("confidence", 0.0) or 0.0,
+            )
             logger.info(
                 f"Phase 5: Selected {len(tools)} tools: {[t['function']['name'] for t in tools]}"
             )
+
+        phase = router_decision.get("phase", "GENERAL")
+        tool_required = router_decision.get("tool_required", False)
+        tool_domains = router_decision.get("tool_domains", [])
+        router_confidence = router_decision.get("confidence")
+        expected_tool_calls = int(router_decision.get("expected_tool_calls") or 0)
+        intent = tool_domains[0].upper() if tool_domains else "GENERAL"
+
         simple_listing_mode = (
-            complexity == "SIMPLE"
+            phase in ("GENERAL", "MEDIUM")
             and intent == "FILESYSTEM"
             and self._is_simple_directory_listing_request(user_input)
         )
@@ -467,7 +938,9 @@ class ChatOrchestrator:
                 "Phase 5 opt: simple directory listing mode enabled; restricted tools to %s",
                 [t["function"]["name"] for t in tools],
             )
-        requires_tool_execution = self._requires_tool_execution(intent, user_input, tools)
+        requires_tool_execution = self._requires_tool_execution(
+            tool_required, user_input, tools, intent=intent
+        )
         if requires_tool_execution:
             logger.info("Phase 5 guard: tool execution required for this request.")
         INTENT_CLASSIFICATION_TOTAL.labels(intent=intent).inc()
@@ -510,7 +983,7 @@ class ChatOrchestrator:
         current_seq = len(conversation_history)
 
         # Inject Dynamic System Prompt
-        system_prompt = self._get_system_prompt(intent, bool(tools))
+        system_prompt = self._get_system_prompt(phase, bool(tools))
         if user_context:
             system_prompt += user_context
         if semantic_context:
@@ -524,9 +997,8 @@ class ChatOrchestrator:
             messages.insert(0, ChatMessage(role=MessageRole.SYSTEM, content=system_prompt))
 
         if requires_tool_execution and not tools:
-            fail_content = self._build_fail_closed_response(
-                intent=intent,
-                reason="No matching tools were selected for a tool-dependent request",
+            fail_content = self._build_clarification_response(
+                reason="No matching tools were selected for this request",
                 tools=tools,
             )
             current_seq += 1
@@ -546,7 +1018,7 @@ class ChatOrchestrator:
             return
 
         # --- Phase 5.5: Route COMPLEX to Agentic Engine ---
-        if complexity == "COMPLEX" and tools:
+        if phase == "COMPLEX" and tools:
             logger.info("Phase 5.5: Routing to agentic Plan+ReAct engine")
             self.last_usage = None  # Initialize usage tracking
 
@@ -615,6 +1087,7 @@ class ChatOrchestrator:
         # --- Phase 6: Fast Path (SIMPLE) — One-shot flow ---
         current_tool_calls: List[ToolCall] = []
         full_content = ""
+        raw_content = ""
         self.last_usage = None  # Track usage from stream
         phase6_max_tokens = (
             min(max_tokens, SIMPLE_LISTING_PHASE6_MAX_TOKENS) if simple_listing_mode else max_tokens
@@ -633,6 +1106,7 @@ class ChatOrchestrator:
                 logger.info("Orchestrator cancelled during streaming")
                 return
 
+            raw_content += chunk.content
             if not (requires_tool_execution and tools):
                 full_content += chunk.content
             if chunk.tool_calls:
@@ -648,21 +1122,40 @@ class ChatOrchestrator:
             else:
                 pass
 
+            if (phase == "MEDIUM" or expected_tool_calls == 1) and len(current_tool_calls) > 1:
+                logger.warning(
+                    "Phase 6: Tool call cap enforced (phase=%s, expected=%s). Slicing %s to 1.",
+                    phase,
+                    expected_tool_calls,
+                    len(current_tool_calls),
+                )
+                current_tool_calls = current_tool_calls[:1]
+
             # Capture usage from the last chunk if present
             if chunk.usage:
                 self.last_usage = chunk.usage
 
         # Check for fallback parsing (Phase 6b)
         if not current_tool_calls and tools:
-            parsed = self.provider._try_parse_tool_calls(full_content)
+            parsed = self.provider._try_parse_tool_calls(raw_content)
             if parsed:
                 logger.info(f"Phase 6b: Parsed {len(parsed)} tool calls from content fallback")
-                current_tool_calls = parsed
-                yield StreamChunk(content="", tool_calls=parsed, done=False)
+                if (phase == "MEDIUM" or expected_tool_calls == 1) and len(parsed) > 1:
+                    logger.warning(
+                        "Phase 6b: Tool call cap enforced (phase=%s, expected=%s). Slicing %s to 1.",
+                        phase,
+                        expected_tool_calls,
+                        len(parsed),
+                    )
+                    current_tool_calls = parsed[:1]
+                else:
+                    current_tool_calls = parsed
+                yield StreamChunk(content="", tool_calls=current_tool_calls, done=False)
 
         # Guard: tool-dependent requests must produce an executable tool call (retry once with stricter prompt).
         if requires_tool_execution and tools and not current_tool_calls:
             logger.warning("Phase 6d: Required tool call missing — forcing one strict retry")
+            yield StreamChunk(content="", status="Rethinking tool selection...", done=False)
             try:
                 forced_messages = list(messages) + [
                     ChatMessage(
@@ -684,10 +1177,19 @@ class ChatOrchestrator:
                 if not forced_tool_calls and forced.message.content:
                     forced_tool_calls = self.provider._try_parse_tool_calls(forced.message.content)
                 if forced_tool_calls:
-                    current_tool_calls = forced_tool_calls
+                    if (phase == "MEDIUM" or expected_tool_calls == 1) and len(forced_tool_calls) > 1:
+                        logger.warning(
+                            "Phase 6d: Tool call cap enforced (phase=%s, expected=%s). Slicing %s to 1.",
+                            phase,
+                            expected_tool_calls,
+                            len(forced_tool_calls),
+                        )
+                        current_tool_calls = forced_tool_calls[:1]
+                    else:
+                        current_tool_calls = forced_tool_calls
                     if forced.usage:
                         self.last_usage = forced.usage
-                    yield StreamChunk(content="", tool_calls=forced_tool_calls, done=False)
+                    yield StreamChunk(content="", tool_calls=current_tool_calls, done=False)
                 else:
                     full_content = self._build_fail_closed_response(
                         intent=intent,
@@ -795,6 +1297,9 @@ class ChatOrchestrator:
                 yield StreamChunk(content="", status=f"Executing {tool_name}...", done=False)
 
                 tool_metadata: Dict[str, Any] = {"tool_name": tool_name, "truncated": False}
+                tool_error: Optional[str] = None
+                result = ""
+                success = False
                 try:
                     tool_start = time.time()
                     tool = self.registry.get_tool(tool_name)
@@ -810,17 +1315,51 @@ class ChatOrchestrator:
                         else:
                             raise
                     result, tool_metadata = self._prepare_tool_result(tool_name, raw_result)
-                    successful_tool_names.append(tool_name)
+                    success = True
                     TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
                 except Exception as e:
                     logger.error(f"Tool execution failed: {e}")
                     TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="error").inc()
+                    tool_error = str(e)
                     tool_errors.append(f"{tool_name}: {e}")
                     result = f"Error executing tool {tool_name}: {e}"
                 finally:
                     TOOL_EXECUTION_DURATION_SECONDS.labels(tool_name=tool_name).observe(
                         time.time() - tool_start
                     )
+
+                # Optional verification step (selective)
+                if self._should_verify_tool_result(
+                    tool_name=tool_name,
+                    result_text=str(result),
+                    had_error=not success,
+                    router_confidence=router_confidence,
+                ):
+                    ok, reason = await self._verify_tool_result(
+                        user_input=user_input,
+                        tool_name=tool_name,
+                        tool_args=tool_args,
+                        result_text=str(result),
+                        model=model,
+                    )
+                    tool_metadata["verification_ok"] = ok
+                    tool_metadata["verification_reason"] = reason
+                    if not ok:
+                        success = False
+                        tool_errors.append(f"{tool_name}: {reason}")
+                        if not tool_error:
+                            tool_error = reason
+
+                if success:
+                    successful_tool_names.append(tool_name)
+
+                # Update tool reliability (best-effort)
+                try:
+                    await tool_reliability_store.update(
+                        tool_name, success=success, error=tool_error
+                    )
+                except Exception as e:
+                    logger.debug("Tool reliability update failed for %s: %s", tool_name, e)
 
                 # Persist result
                 current_seq += 1
@@ -847,9 +1386,8 @@ class ChatOrchestrator:
                 else max_tokens
             )
             if requires_tool_execution and not successful_tool_names:
-                synthesis_content = self._build_fail_closed_response(
-                    intent=intent,
-                    reason="All tool calls failed; refusing to fabricate results",
+                synthesis_content = self._build_clarification_response(
+                    reason="All tool calls failed or could not be verified",
                     tools=tools,
                     tool_errors=tool_errors,
                 )
@@ -1100,79 +1638,33 @@ class ChatOrchestrator:
             return "FETCH"
         return "GENERAL"
 
-    async def _filter_tools(self, intent: str, user_input: str) -> List[Dict[str, Any]]:
+
+
+    def _get_system_prompt(self, phase: str, has_tools: bool) -> str:
         """
-        Phase 5: Reduce tool scope based on intent.
-        Includes both MCP remote tools and local registered tools.
-        """
-        if intent == "GENERAL":
-            return []
-        intent = intent.upper()
-
-        # Category-first (deterministic and most reliable for correctness).
-        category_tools = self.registry.get_tools_by_category(intent)
-        query_tools = await self.registry.get_ollama_tools(query=user_input)
-        local_tools = [t.to_ollama_format() for t in self.registry._tools.values()]
-
-        intent_keywords: Dict[str, List[str]] = {
-            "FILESYSTEM": ["file", "dir", "directory", "folder", "read", "write", "list", "path"],
-            "GIT": ["git", "repo", "branch", "commit", "diff", "status", "merge", "rebase"],
-            "FETCH": ["fetch", "http", "url", "web", "search", "request", "download", "browse"],
-            "TIME": ["time", "utc", "timezone", "timestamp"],
-            "MEMORY": ["memory", "remember", "recall", "entity", "graph", "observation"],
-            "SQLITE": ["sqlite", "sql", "query", "table", "insert", "update", "select", "delete"],
-        }
-        priority_names: Dict[str, List[str]] = {
-            "TIME": ["current_time", "get_current_time", "convert_time", "get_timestamp"],
-            "FETCH": ["fetch_html", "fetch_markdown", "fetch_txt", "fetch_json", "web_search_duckduckgo"],
-            "MEMORY": ["create_entities", "add_observations", "search_nodes", "open_nodes", "read_graph"],
-            "SQLITE": ["query", "execute", "create-table", "insert-record", "list-tables"],
-        }
-
-        filtered: List[Dict[str, Any]] = []
-        seen_names: set[str] = set()
-
-        def add_tool(tool: Dict[str, Any]) -> None:
-            name = tool["function"]["name"]
-            if name not in seen_names:
-                filtered.append(tool)
-                seen_names.add(name)
-
-        for tool in category_tools:
-            add_tool(tool)
-
-        keywords = intent_keywords.get(intent, [])
-        preferred = set(priority_names.get(intent, []))
-        for tool in query_tools + local_tools:
-            name = tool["function"]["name"]
-            low = f"{name.lower()} {tool['function'].get('description', '').lower()}"
-            if name in preferred or any(k in low for k in keywords):
-                add_tool(tool)
-
-        # Last-resort fallback: if category tools are empty, keep a small query-derived candidate set.
-        if not filtered:
-            for tool in query_tools[:6]:
-                add_tool(tool)
-
-        logger.info(
-            "Phase 5: _filter_tools for intent=%s: %s selected (names=%s)",
-            intent,
-            len(filtered),
-            [t["function"]["name"] for t in filtered],
-        )
-        return filtered[:12]
-
-    def _get_system_prompt(self, intent: str, has_tools: bool) -> str:
-        """
-        Get the appropriate system prompt based on intent and tool availability.
+        Get the appropriate system prompt based on phase and tool availability.
         """
         base_prompt = "You are a helpful AI assistant."
 
-        if not has_tools:
-            return (
-                base_prompt
-                + "\nAnswer using your internal knowledge. Do not hallucinate or fabricate tool calls."
+        phase = phase.upper()
+        if phase == "GENERAL":
+            base_prompt += (
+                "\nBe concise and direct. Ask a clarifying question if the request is ambiguous. "
+                "Admit uncertainty when needed. Do not mention tools."
             )
+        elif phase == "MEDIUM":
+            base_prompt += (
+                "\nPrefer a single-step solution. If tools are needed, call at most one tool. "
+                "After using a tool, answer plainly and briefly."
+            )
+        else:
+            base_prompt += (
+                "\nHandle multi-step tasks carefully. Use tools when required and verify outputs "
+                "before concluding."
+            )
+
+        if not has_tools:
+            return base_prompt + "\nAnswer using your internal knowledge."
 
         tool_instructions = (
             "\nYou have access to external tools via MCP.\n"

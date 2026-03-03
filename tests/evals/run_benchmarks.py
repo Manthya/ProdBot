@@ -89,9 +89,27 @@ class MockBenchmarkProvider(BaseLLMProvider):
     async def complete(self, **kwargs):
         # Required for intent classification/summarization in Orchestrator
         resp = MagicMock()
-        text = kwargs.get('messages', [MagicMock(content="")])[-1].content
+        messages = kwargs.get('messages', [MagicMock(content="")])
+        text = messages[-1].content if messages else ""
+        system_text = messages[0].content if messages else ""
+
+        if "routing classifier" in system_text.lower() or "json object for routing" in system_text.lower():
+            # Return a minimal JSON routing decision
+            tool_required = bool(self.expected_trajectory)
+            resp.message.content = (
+                "{"
+                f"\"phase\": \"MEDIUM\", "
+                f"\"tool_required\": {str(tool_required).lower()}, "
+                "\"tool_domains\": [\"general\"], "
+                f"\"expected_tool_calls\": {1 if tool_required else 0}, "
+                "\"confidence\": 0.8, "
+                "\"need_clarification\": false"
+                "}"
+            )
+            return resp
+
         if "intent" in text.lower():
-            resp.message.content = "FILESYSTEM" # Default mock
+            resp.message.content = "FILESYSTEM"  # Legacy fallback
         else:
             resp.message.content = "Mocked answer"
         return resp

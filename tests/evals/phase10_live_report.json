@@ -1,0 +1,2278 @@
+{
+  "total": 98,
+  "passed": 51,
+  "failed": 47,
+  "results": [
+    {
+      "test_id": "G-001",
+      "query": "Hello",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Hello! How can I assist you today?",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-002",
+      "query": "Hi there",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Hello! How can I assist you today?",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-003",
+      "query": "How are you?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "I'm an AI, so I don't have feelings, but thanks for asking! How can I assist you today?",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-004",
+      "query": "Thanks",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "You're welcome! If you have any specific questions or need help with something, feel free to ask.",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-005",
+      "query": "What is Python?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Python is a high-level, interpreted programming language known for its readability and simplicity. It supports multiple programming paradigms, including procedural, object-oriented, and functional pro",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-006",
+      "query": "Explain git in simple terms",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Git is a tool that helps people keep track of changes they make to computer files, especially useful for software projects. It allows multiple people to work on the same project without overwriting ea",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-007",
+      "query": "What is 2+2?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "2+2 equals 4.",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-008",
+      "query": "Tell me a joke",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Why don't scientists trust atoms? Because they make up everything.",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-009",
+      "query": "Summarize the idea of recursion",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Recursion is a programming concept where a function calls itself repeatedly until it meets a condition to stop. It's used to solve problems that can be broken down into smaller, similar problems. Each",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-010",
+      "query": "What is a database?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "A database is an organized collection of structured information, or data, typically stored electronically in computer systems. It allows for efficient storage, retrieval, and management of large amoun",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-011",
+      "query": "How does HTTP work?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "HTTP (Hypertext Transfer Protocol) works by enabling communication between web browsers and servers over the internet. Here\u2019s a simplified breakdown:\n\n1. **Client Request**: A user's browser sends an ",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-012",
+      "query": "What is JSON?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "JSON (JavaScript Object Notation) is a lightweight data format for storing and transporting data. It is based on a subset of JavaScript and uses human-readable text to transmit data objects consisting",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-013",
+      "query": "Define machine learning",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Machine learning is a method of teaching computers to make decisions or predictions based on data, without being explicitly programmed. It involves developing algorithms that can learn from and make d",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-014",
+      "query": "Explain REST APIs",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "REST (Representational State Transfer) APIs are web services that follow architectural constraints to provide a standardized way for applications to communicate over HTTP or HTTPS. They allow clients ",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-015",
+      "query": "What is unit testing?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Unit testing is a method of software testing where individual parts or components (units) of a program are tested in isolation to ensure they function as intended. It typically involves writing test c",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-016",
+      "query": "Why use version control?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Version control helps track changes in code or documents, allows multiple people to collaborate easily, and enables you to revert to previous states if something goes wrong. It's essential for managin",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-017",
+      "query": "Give me a short poem",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "Whispers of Wind\n\nLeaves dance in the breeze so light,  \nShadows play as day turns night.  \nNature's symphony, soft and sweet,  \nIn every breath, a hidden treat.\n\nDoes this theme resonate with you, or",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-018",
+      "query": "What is a monorepo?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "A monorepo, short for \"single repository,\" is a software development practice where multiple related or unrelated software projects are stored in one version control repository instead of separate rep",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-019",
+      "query": "Explain TCP vs UDP",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "TCP (Transmission Control Protocol) and UDP (User Datagram Protocol) are two different protocols used for sending data over a network, but they operate differently:\n\n**TCP:**\n- Reliable connection-ori",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-020",
+      "query": "What is a cache?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "A cache is a temporary storage area that holds frequently accessed data to reduce access time and improve performance. It stores copies of data from more slowly accessible sources, allowing for quicke",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-021",
+      "query": "Explain Docker in one paragraph",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-022",
+      "query": "What is concurrency?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-023",
+      "query": "What is OAuth?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-024",
+      "query": "What is load balancing?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-025",
+      "query": "Explain hashing",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-026",
+      "query": "Explain logging levels",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-027",
+      "query": "What is latency?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "no close frame received or sent",
+          "type": "ConnectionClosedError",
+          "repr": "ConnectionClosedError(None, None, None)"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "G-028",
+      "query": "What is a CDN?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "A CDN, or Content Delivery Network, is a distributed network of servers that work together to deliver web content, such as images, videos, and JavaScript files, to users more efficiently by reducing t",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-029",
+      "query": "Explain TLS",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "TLS, or Transport Layer Security, is a cryptographic protocol designed to provide communication security over the Internet. It enables privacy and data integrity between two communicating computer app",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "G-030",
+      "query": "What is an ORM?",
+      "expected_tool_required": false,
+      "expected_tool_call_cap": 0,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "An ORM, or Object-Relational Mapping, is a programming technique that converts data between incompatible type systems, such as relational databases and object-oriented programming languages. It maps c",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "T-031",
+      "query": "What time is it right now?",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current time in the Asia/Tokyo timezone is: %+0900-%40-%2 %15:%3:%S. This is your local time if you are in Tokyo, or UTC+9 if you are elsewhere. To provide a more readable format, it translates to",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-032",
+      "query": "Current time in Tokyo",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "convert_time"
+      ],
+      "status_messages": [
+        "Executing convert_time..."
+      ],
+      "errors": [],
+      "final_content": "It seems there was an error in the request to get the current time in Tokyo. Let me correct that and try again.\n{\n  \"name\": \"get_current_time\",\n  \"arguments\": {\n    \"timezone\": \"Asia/Tokyo\"\n  }\n}",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "T-033",
+      "query": "UTC time please",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current UTC time is 2026-03-03 06:41:23.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-034",
+      "query": "Timestamp now please",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "get_timestamp",
+      "tool_calls_detected": [
+        "get_timestamp"
+      ],
+      "status_messages": [
+        "Executing get_timestamp..."
+      ],
+      "errors": [],
+      "final_content": "The current timestamp in milliseconds is 1772520122508.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-035",
+      "query": "time now",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current time in Asia/Tokyo is: %+0900-%42-%2 %15:%3:%S. This appears to be an incorrectly formatted date string. The correct format should be something like YYYY-MM-DD HH:MM:SS, but the response c",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-036",
+      "query": "what's the time",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current time in Tokyo (Japan) is 15:43 on March 3, 2026.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-037",
+      "query": "time in Paris",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current time in Paris is 07:44 on March 3, 2026.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-038",
+      "query": "timezone for PST?",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "convert_time"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing convert_time..."
+      ],
+      "errors": [],
+      "final_content": "It seems there was an error in attempting to use the time conversion tool. For Pacific Standard Time (PST), you can generally say it is UTC-8 during standard time and shifts to UTC-7 during Daylight S",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "T-039",
+      "query": "what time is it in New York",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current time in New York is 01:45 AM (on March 3, 2026).",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-040",
+      "query": "current time UTC",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=TIME. Reason: Model did not return a valid tool call. Available tools: current_time, convert_time, get_timestam",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "T-041",
+      "query": "timestamp",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "get_timestamp",
+      "tool_calls_detected": [
+        "get_timestamp"
+      ],
+      "status_messages": [
+        "Executing get_timestamp..."
+      ],
+      "errors": [],
+      "final_content": "The current timestamp in milliseconds is 1772520394244. If you need it formatted as a date and time, please let me know.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-042",
+      "query": "what time is it",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "current_time",
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "errors": [],
+      "final_content": "The current time in Tokyo is the local time: \"+0900-47-2 15:3:S\". Note that the format provided seems incorrect and might be a placeholder or an error. The actual time cannot be accurately represented",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-043",
+      "query": "git status",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_status",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=GIT. Reason: Model did not return a valid tool call. Available tools: git_branch, git_add, git_checkout, git_ch",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "GIT-044",
+      "query": "Show me git log",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_log",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "GIT-045",
+      "query": "git branch",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_branch",
+      "tool_calls_detected": [
+        "git_branch"
+      ],
+      "status_messages": [
+        "Executing git_branch..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "GIT-046",
+      "query": "git diff",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_diff",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "GIT-047",
+      "query": "git checkout main",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_checkout",
+      "tool_calls_detected": [
+        "git_checkout"
+      ],
+      "status_messages": [
+        "Executing git_checkout..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=GIT. Reason: Model response contained simulated/unverified language. Available tools: git_branch, git_add, git_",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-048",
+      "query": "show git status",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_status",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "GIT-049",
+      "query": "git commit history",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_log",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=GIT. Reason: Model did not return a valid tool call. Available tools: git_branch, git_checkout, git_add, git_ch",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "GIT-050",
+      "query": "git status for this repo",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_status",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=GIT. Reason: Model did not return a valid tool call. Available tools: git_branch, git_checkout, git_add, git_ch",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "GIT-051",
+      "query": "show git branches",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_branch",
+      "tool_calls_detected": [
+        "git_branch"
+      ],
+      "status_messages": [
+        "Executing git_branch..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "GIT-052",
+      "query": "git diff last commit",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "git_diff",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "F-053",
+      "query": "Open https://example.com",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "F-054",
+      "query": "Fetch https://example.com",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing fetch_html..."
+      ],
+      "errors": [],
+      "final_content": "The content fetched from https://example.com is as follows:\n\n```html\n<!doctype html>\n<html lang=\"en\">\n<head>\n<title>Example Domain</title>\n<meta name=\"viewport\" content=\"width=device-width, initial-sc",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-055",
+      "query": "Browse https://example.com",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "errors": [],
+      "final_content": "The content of the page at https://example.com is as follows:\n\n- Title: Example Domain\n- Main text: \"This domain is for use in documentation examples without needing permission. Avoid use in operation",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-056",
+      "query": "Search the web for cats",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "web_search",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=FETCH. Reason: Model did not return a valid tool call. Available tools: fetch_html, read_text_file, fetch_markd",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "F-057",
+      "query": "Look up the Eiffel Tower online",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "web_search",
+      "tool_calls_detected": [
+        "web_search_duckduckgo"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing web_search_duckduckgo..."
+      ],
+      "errors": [],
+      "final_content": "It seems there was an issue with retrieving the information. Let's try another search engine.\n\n{\n  \"name\": \"web_search_qwant\",\n  \"arguments\": {\n    \"query\": \"Eiffel Tower\"\n  }\n}",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "F-058",
+      "query": "Find online info about pandas",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "web_search",
+      "tool_calls_detected": [
+        "web_search_duckduckgo"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing web_search_duckduckgo..."
+      ],
+      "errors": [],
+      "final_content": "It seems there was an issue with retrieving the information. Let's try another search engine for info about pandas.\n\n{\"name\": \"web_search_qwant\", \"arguments\": {\"query\": \"pandas\"}}",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "F-059",
+      "query": "Open https://example.com/page",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "errors": [],
+      "final_content": "The page you requested could not be found. It seems that the URL https://example.com/page is returning a 404 error, indicating that it does not exist or cannot be accessed with this address.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-060",
+      "query": "Download https://example.com/file",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [
+        "fetch_json"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing fetch_json..."
+      ],
+      "errors": [],
+      "final_content": "The file you tried to download from https://example.com/file could not be found. The server returned a 404 error.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "F-061",
+      "query": "Search the web for latest Python version",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "web_search",
+      "tool_calls_detected": [
+        "web_search_duckduckgo"
+      ],
+      "status_messages": [
+        "Executing web_search_duckduckgo..."
+      ],
+      "errors": [],
+      "final_content": "It seems there was an issue with retrieving the information. Let's try another search engine.\n\n{\n  \"name\": \"web_search_bing\",\n  \"arguments\": {\n    \"query\": \"latest python version\"\n  }\n}",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "F-062",
+      "query": "fetch https://example.com/docs",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "errors": [],
+      "final_content": "The URL https://example.com/docs returned a 404 error, indicating that the page was not found.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-063",
+      "query": "Open https://example.com and summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "fetch_html",
+      "tool_calls_detected": [
+        "puppeteer_navigate"
+      ],
+      "status_messages": [
+        "Executing puppeteer_navigate..."
+      ],
+      "errors": [],
+      "final_content": "The website at https://example.com has been successfully navigated. Here is a summary of its content:\n\nExample Domain is an example domain. The main purpose of this site is to serve as a host for the ",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "F-064",
+      "query": "search the web for climate data",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "web_search",
+      "tool_calls_detected": [
+        "web_search_duckduckgo"
+      ],
+      "status_messages": [
+        "Executing web_search_duckduckgo..."
+      ],
+      "errors": [],
+      "final_content": "I couldn't find any specific climate data with that general search term. Could you please specify what kind of climate data you're looking for, such as temperature records, precipitation levels, or a ",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-065",
+      "query": "List files in this folder",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "directory_tree",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=FILESYSTEM. Reason: Model did not return a valid tool call. Available tools: list_directory, read_text_file, re",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-066",
+      "query": "Read ./README.md",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "FS-067",
+      "query": "Open docs/phase10.0.md",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "FS-068",
+      "query": "Show package.json",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing read_text_file..."
+      ],
+      "errors": [],
+      "final_content": "The file `package.json` does not exist at the specified path. Please provide a correct path or ensure that the file is present in the current working directory.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-069",
+      "query": "List directory",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "directory_tree",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=FILESYSTEM. Reason: Model did not return a valid tool call. Available tools: read_text_file, list_directory, re",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-075",
+      "query": "Read file /etc/hosts",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing read_text_file..."
+      ],
+      "errors": [],
+      "final_content": "I'm unable to access that file due to permission restrictions. It looks like the file is located in a directory I don't have read permissions for, or it's outside of my allowed directories. Would you ",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-076",
+      "query": "List files here",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "directory_tree",
+      "tool_calls_detected": [
+        "list_directory"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing list_directory..."
+      ],
+      "errors": [],
+      "final_content": "Here is the list of files and directories:\n\n- .env\n- .env.example\n- .git (directory)\n- .github (directory)\n- .gitignore\n- .pgvector_build (directory)\n- .pytest_cache (directory)\n- .ruff_cache (directo",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-077",
+      "query": "Show me the directory tree",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "directory_tree",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=FILESYSTEM. Reason: Model did not return a valid tool call. Available tools: read_text_file, list_directory, re",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-078",
+      "query": "Open ./pyproject.toml",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "FS-079",
+      "query": "Read tests/evals/phase10_cases.csv",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [],
+      "final_content": "I couldn't verify the tool result well enough to answer safely. Reason: All tool calls failed or could not be verified. Tool issues: read_text_file: The tool result is incomplete and truncated at the ",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "test_id": "FS-080",
+      "query": "Show contents of docs/phase10.0_testing.md",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "read_file",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "SQL-081",
+      "query": "select * from users",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "query",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "SQL-087",
+      "query": "select count(*) from users",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "query",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "SQL-090",
+      "query": "select * from items",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 1,
+      "expected_tool_name": "query",
+      "tool_calls_detected": [
+        "query"
+      ],
+      "status_messages": [
+        "Executing query..."
+      ],
+      "errors": [],
+      "final_content": "It seems there is no table named 'items' in the database. Please check the table name and try again. If you believe this is an error, please provide more details so I can assist further.",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-093",
+      "query": "Compare file A and file B",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "read_multiple_files"
+      ],
+      "status_messages": [
+        "Executing read_multiple_files..."
+      ],
+      "errors": [],
+      "final_content": "It appears that the specified parent directories for both files do not exist. Please verify the file paths and try again. If you need assistance with comparing two specific files, please provide the c",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-094",
+      "query": "Read README and summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "check_repo_status"
+      ],
+      "status_messages": [
+        "Executing check_repo_status..."
+      ],
+      "errors": [],
+      "final_content": "The current branch is `feature_v9.2`. There are modified files that are not staged for a commit:  \n- `src/chatbot_ai_system/orchestrator.py`\n- `tests/evals/run_benchmarks.py`\n- `tests/redteam/conftest",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-095",
+      "query": "Find the bug in src and summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "list_directory"
+      ],
+      "status_messages": [
+        "Executing list_directory..."
+      ],
+      "errors": [],
+      "final_content": "The directory `src` contains a folder named `chatbot_ai_system`. To find the bug, we need to look inside this folder. Let's list its contents next.\n```json\n{\"name\": \"list_directory\", \"arguments\": {\"pa",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-096",
+      "query": "Open https://example.com and summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "puppeteer_navigate"
+      ],
+      "status_messages": [
+        "Executing puppeteer_navigate..."
+      ],
+      "errors": [],
+      "final_content": "The webpage at https://example.com has been navigated. Here's a summary of its content:\n\n---\n\n**Summary:**\n\n- **Title:** Example Domain\n- **Description:** A simple website used as an example domain fo",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-097",
+      "query": "Search the web for pandas then summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "web_search_duckduckgo"
+      ],
+      "status_messages": [
+        "Executing web_search_duckduckgo..."
+      ],
+      "errors": [],
+      "final_content": "Pandas is a Python library used for data manipulation and analysis, developed by Wes McKinney in 2008. It's designed to handle large datasets efficiently and provides various functions to make data an",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-098",
+      "query": "Read docs/phase10.0.md and extract key changes",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "C-099",
+      "query": "List files and then show git status",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "list_directory"
+      ],
+      "status_messages": [
+        "Executing list_directory..."
+      ],
+      "errors": [],
+      "final_content": "\u0e04\u0e13\u0e30\u0e01\u0e23\u0e23\u0e21\u0e01\u0e32\u0e23\u0e17\u0e33\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e44\u0e1f\u0e25\u0e4c\u0e41\u0e25\u0e49\u0e27\u0e04\u0e48\u0e30 \u0e15\u0e2d\u0e19\u0e19\u0e35\u0e49\u0e08\u0e30\u0e41\u0e2a\u0e14\u0e07\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e02\u0e2d\u0e07 git:\n\n```json\n{\"name\": \"git_status\", \"arguments\": {}}\n```",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-100",
+      "query": "Fetch https://example.com then summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "fetch_txt"
+      ],
+      "status_messages": [
+        "Executing fetch_txt..."
+      ],
+      "errors": [],
+      "final_content": "The content from https://example.com is a simple informational page stating that the domain is intended for usage as an example in documentation and does not require special permission, with a note to",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-101",
+      "query": "Read file X and compare to file Y",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [],
+      "final_content": "It seems that the file at path `file_X_path` does not exist. Please provide the correct path for file X and I will proceed with reading and comparing it to file Y. If you also need me to read file Y, ",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-102",
+      "query": "Search web for cats and list results",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "errors": [],
+      "final_content": "The web search for \"cats\" returned a standard Google search page. To provide you with useful links, I need to make another request specifically aimed at fetching the relevant content.\n\nLet me fetch mo",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-103",
+      "query": "Read README.md and check for TODO",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing read_text_file..."
+      ],
+      "errors": [],
+      "final_content": "I couldn't verify the tool result well enough to answer safely. Reason: All tool calls failed or could not be verified. Tool issues: read_text_file: The tool result does not contain any information ab",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-104",
+      "query": "Open docs and summarize differences",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "list_directory"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing list_directory..."
+      ],
+      "errors": [],
+      "final_content": "It seems I don't have access to the root directory (\"/\"). Could you please specify which documents or files you would like me to compare and summarize? Please provide a specific path within my allowed",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-105",
+      "query": "Fetch URL and extract title",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=FETCH. Reason: Model did not return a valid tool call. Available tools: fetch_html, puppeteer_navigate, fetch_t",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": [
+        false
+      ]
+    },
+    {
+      "test_id": "C-106",
+      "query": "Search for API docs then summarize",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [
+        {
+          "error": "",
+          "type": "TimeoutError",
+          "repr": "TimeoutError()"
+        }
+      ],
+      "final_content": "",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": []
+    },
+    {
+      "test_id": "C-107",
+      "query": "List directory and then read README",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "list_directory",
+        "read_text_file"
+      ],
+      "status_messages": [
+        "Executing list_directory..."
+      ],
+      "errors": [],
+      "final_content": "{\"name\": \"read_file\", \"arguments\": {\"file_path\":\"README.md\"}}\n",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-108",
+      "query": "Check git status and then show diff",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=GIT. Reason: Model did not return a valid tool call. Available tools: git_branch, git_checkout, git_add, git_ch",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": [
+        false
+      ]
+    },
+    {
+      "test_id": "C-109",
+      "query": "Compare two files and explain changes",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [
+        "list_directory"
+      ],
+      "status_messages": [
+        "Executing list_directory..."
+      ],
+      "errors": [],
+      "final_content": "Which two files would you like to compare? Please provide the file names from the list above.",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true
+      ]
+    },
+    {
+      "test_id": "C-110",
+      "query": "Search online then update local notes",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "Rethinking tool selection..."
+      ],
+      "errors": [],
+      "final_content": "I can't verify this request reliably via tools yet, so I won't simulate a result. Intent=FETCH. Reason: Model did not return a valid tool call. Available tools: fetch_html, fetch_txt, fetch_json, read",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": [
+        false
+      ]
+    },
+    {
+      "test_id": "C-111",
+      "query": "Read error log and find root cause",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (5 steps):\n1. Read the error log file\n2. Identify the source file and line mentioned in the error message\n3. Note down any error codes or descriptive messages for further research\n4. Research the identified error code or message to understand its root cause\n5. Synthesize findings to determine the primary reason for the error"
+      ],
+      "errors": [],
+      "final_content": "I can't verify this result reliably from executed tool outputs, so I won't simulate an answer. Reason: No tool was executed successfully in agentic flow. Available tools: list_directory, read_multiple",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": [
+        false
+      ]
+    },
+    {
+      "test_id": "C-112",
+      "query": "Analyze code and suggest fixes",
+      "expected_tool_required": true,
+      "expected_tool_call_cap": 2,
+      "expected_tool_name": "",
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "errors": [],
+      "final_content": "To provide specific suggestions for fixing code, I need to see the actual code in question along with details about the errors or issues you're encountering. Please share the relevant part of your cod",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": false,
+      "checks": [
+        false
+      ]
+    }
+  ],
+  "skip_tags": [
+    "mock_only",
+    "side_effect"
+  ],
+  "include_tags": []
+}
