@@ -20,8 +20,20 @@ import inspect
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import UUID
+from dataclasses import dataclass, field
 
 from chatbot_ai_system.config import get_settings
+from chatbot_ai_system.prompts import (
+    build_router_prompt,
+    build_system_prompt,
+    build_verification_prompt,
+    build_reflection_prompt,
+    INTENT_CLASSIFIER_PROMPT,
+    ROUTER_STRICT_SYSTEM_PROMPT,
+    FORCED_TOOL_CALL_PROMPT,
+    SUMMARIZE_PROMPT_TEMPLATE,
+    CONSOLIDATE_SUMMARY_PROMPT_TEMPLATE,
+)
 from chatbot_ai_system.database.redis import redis_client
 from chatbot_ai_system.models.schemas import (
     ChatMessage,
@@ -39,6 +51,8 @@ from chatbot_ai_system.providers.base import BaseLLMProvider
 from chatbot_ai_system.services.agentic_engine import AgenticEngine
 from chatbot_ai_system.services.embedding import EmbeddingService
 from chatbot_ai_system.services.tool_reliability import tool_reliability_store
+from chatbot_ai_system.services.reflection import ReflectionHandler
+from chatbot_ai_system.services.agents import get_agent_for_node, AgentConfig
 from chatbot_ai_system.personal.constants import get_hitl_tool_names
 from chatbot_ai_system.tools.registry import ToolRegistry
 
@@ -141,6 +155,84 @@ SIMULATION_MARKERS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Graph State — shared context across all nodes
+# ---------------------------------------------------------------------------
+@dataclass
+class AgentState:
+    """Shared mutable state passed through graph nodes."""
+    # Core context
+    messages: List[ChatMessage]
+    user_input: str
+    model: str
+    temperature: float
+    max_tokens: int
+    conv_uuid: Any
+    current_seq: int
+    start_time: float
+
+    # Router output
+    router_decision: Dict[str, Any] = field(default_factory=dict)
+    phase: str = "GENERAL"
+    intent: str = "GENERAL"
+    tools: List[Dict[str, Any]] = field(default_factory=list)
+    tool_required: bool = False
+    requires_tool_execution: bool = False
+    simple_listing_mode: bool = False
+    expected_tool_calls: int = 0
+    router_confidence: Optional[float] = None
+
+    # Execution state
+    current_tool_calls: List[Any] = field(default_factory=list)
+    full_content: str = ""
+    raw_content: str = ""
+    tool_errors: List[str] = field(default_factory=list)
+    successful_tool_names: List[str] = field(default_factory=list)
+    reflection_count: int = 0
+
+    # Agent handoff tracking
+    active_agent: Optional[str] = None
+    handoff_history: List[str] = field(default_factory=list)
+
+    # Checkpoint
+    checkpoint_id: Optional[str] = None
+
+    # Persistence context
+    conv_summary: Optional[str] = None
+    last_summarized_seq: int = 0
+    last_usage: Any = None
+
+    def to_checkpoint(self, current_node: str, step: int) -> dict:
+        """Serialize resumable subset of state for Redis persistence."""
+        return {
+            "checkpoint_id": self.checkpoint_id,
+            "conv_uuid": str(self.conv_uuid),
+            "current_node": current_node,
+            "step": step,
+            "current_seq": self.current_seq,
+            "phase": self.phase,
+            "intent": self.intent,
+            "active_agent": self.active_agent,
+            "reflection_count": self.reflection_count,
+            "full_content": self.full_content[:500],  # Truncate for size
+            "tool_errors": self.tool_errors,
+            "successful_tool_names": self.successful_tool_names,
+            "handoff_history": self.handoff_history,
+            "status": "running",
+        }
+
+
+# Graph node names
+NODE_PLANNER = "planner"
+NODE_TOOL_EXECUTOR = "tool_executor"
+NODE_REFLECTION = "reflection"
+NODE_SYNTHESIS = "synthesis"
+NODE_END = "END"
+
+MAX_REFLECTION_RETRIES = 3
+CHECKPOINT_TTL_SECONDS = 3600  # 1 hour
+
+
 class ChatOrchestrator:
     """
     Orchestrates the chat flow, handling intent classification,
@@ -162,6 +254,7 @@ class ChatOrchestrator:
         # Always use Ollama for embeddings (Hybrid Architecture)
         self.embedding_service = EmbeddingService(base_url=self.settings.ollama_base_url)
         self.agentic_engine = AgenticEngine(provider=provider, registry=registry)
+        self.reflection_handler = ReflectionHandler(provider=provider)
         # Fix 1.1: Cancellation signal for stream abort safety
         self._cancelled = asyncio.Event()
 
@@ -255,22 +348,7 @@ class ChatOrchestrator:
 
     def _build_router_prompt(self, user_input: str, tool_domains: List[str]) -> List[ChatMessage]:
         domain_list = ", ".join(tool_domains) if tool_domains else "none"
-        prompt = (
-            "You are a routing classifier for a local assistant. Output ONLY JSON, no prose.\n"
-            "Keys:\n"
-            "  phase: GENERAL | MEDIUM | COMPLEX\n"
-            "  tool_required: true/false\n"
-            "  tool_domains: array of tool domains from this list: "
-            f"{domain_list}\n"
-            "  expected_tool_calls: 0 | 1 | 2\n"
-            "  confidence: 0.0 - 1.0\n"
-            "  need_clarification: true/false\n\n"
-            "Guidelines:\n"
-            "- GENERAL: knowledge-only or casual chat\n"
-            "- MEDIUM: one tool call or short single-step answer\n"
-            "- COMPLEX: multi-step with dependencies\n"
-            "- tool_domains must be empty if tool_required=false\n"
-        )
+        prompt = build_router_prompt(domain_list)
         return [
             ChatMessage(role=MessageRole.SYSTEM, content=prompt),
             ChatMessage(role=MessageRole.USER, content=user_input),
@@ -420,7 +498,7 @@ class ChatOrchestrator:
                 strict_messages = [
                     ChatMessage(
                         role=MessageRole.SYSTEM,
-                        content="Output ONLY a JSON object for routing. No prose.",
+                        content=ROUTER_STRICT_SYSTEM_PROMPT,
                     ),
                     router_messages[-1],
                 ]
@@ -528,14 +606,11 @@ class ChatOrchestrator:
         if len(excerpt) > 2000:
             excerpt = excerpt[:2000] + "...[truncated]"
 
-        prompt = (
-            "You are a verification assistant. Given the user request and tool result, "
-            "decide if the result is sufficient to answer the user.\n"
-            "Output ONLY JSON: {\"ok\": true/false, \"reason\": \"...\"}\n\n"
-            f"User request: {user_input}\n"
-            f"Tool: {tool_name}\n"
-            f"Tool args: {tool_args}\n"
-            f"Tool result: {excerpt}\n"
+        prompt = build_verification_prompt(
+            user_input=user_input,
+            tool_name=tool_name,
+            tool_args=str(tool_args),
+            excerpt=excerpt,
         )
         try:
             response = await self.provider.complete(
@@ -1017,173 +1092,325 @@ class ChatOrchestrator:
             )
             return
 
-        # --- Phase 5.5: Route COMPLEX to Agentic Engine ---
-        if phase == "COMPLEX" and tools:
-            logger.info("Phase 5.5: Routing to agentic Plan+ReAct engine")
-            self.last_usage = None  # Initialize usage tracking
+        # --- Graph execution: delegate to _run_graph() ---
+        state = AgentState(
+            messages=messages,
+            user_input=user_input,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            conv_uuid=conv_uuid,
+            current_seq=current_seq,
+            start_time=start_time,
+            router_decision=router_decision,
+            phase=phase,
+            intent=intent,
+            tools=tools,
+            tool_required=tool_required,
+            requires_tool_execution=requires_tool_execution,
+            simple_listing_mode=simple_listing_mode,
+            expected_tool_calls=expected_tool_calls,
+            router_confidence=router_confidence,
+            conv_summary=conv_summary,
+            last_summarized_seq=last_summarized_seq,
+        )
 
-            # Build conversation context for planner
-            conv_context = ""
-            if conv_summary:
-                conv_context = f"Previous context: {conv_summary}"
+        async for chunk in self._run_graph(state):
+            yield chunk
 
-            # Create plan
-            tool_names = [t["function"]["name"] for t in tools]
-            plan = await self.agentic_engine.create_plan(
-                user_input, model, tool_names, conv_context
+    # ===================================================================
+    # Graph Runner — State-Machine Handoff Architecture (Phase 10)
+    # ===================================================================
+
+    async def _run_graph(
+        self, state: AgentState
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Graph runner: dispatches to node functions based on the current phase.
+        Performs agent handoff at each node and persists checkpoints to Redis.
+
+        Flow:
+            COMPLEX → _node_planner → _node_tool_executor → _node_reflection → _node_synthesis
+            MEDIUM  → _node_tool_executor → _node_reflection → _node_synthesis
+            GENERAL → _node_tool_executor → _node_synthesis
+        """
+        import uuid as _uuid
+        phase = state.phase
+
+        # Generate checkpoint ID for this graph execution
+        state.checkpoint_id = str(_uuid.uuid4())
+
+        # Determine starting node
+        if phase == "COMPLEX" and state.tools:
+            current_node = NODE_PLANNER
+        else:
+            current_node = NODE_TOOL_EXECUTOR
+
+        logger.info("Graph: starting at node=%s (phase=%s, checkpoint=%s)",
+                     current_node, phase, state.checkpoint_id[:8])
+
+        # Simple graph loop — nodes return the next node name
+        max_graph_steps = 10  # Circuit breaker
+        step = 0
+        while current_node != NODE_END and step < max_graph_steps:
+            step += 1
+            if self._is_cancelled():
+                logger.info("Graph: cancelled at node=%s", current_node)
+                return
+
+            # --- Agent Handoff: select the right agent for this node ---
+            agent_config = get_agent_for_node(current_node, phase)
+            state.active_agent = agent_config.name
+            state.handoff_history.append(agent_config.name)
+            logger.info(
+                "Graph: handoff to agent='%s' at node='%s' (step %d, temp=%.1f, max_tok=%d)",
+                agent_config.name, current_node, step,
+                agent_config.temperature, agent_config.max_tokens,
             )
 
-            # Execute plan with ReAct loop
-            agentic_content = ""
-            agentic_tool_calls = []
+            if current_node == NODE_PLANNER:
+                next_node = await self._node_planner(state)
+                current_node = next_node
 
-            async for chunk in self.agentic_engine.execute(
-                messages=messages,
-                model=model,
-                tools=tools,
-                plan=plan,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            ):
-                # Fix 1.1: Check for cancellation each iteration
-                if self._is_cancelled():
-                    logger.info("Orchestrator cancelled during agentic execution")
-                    return
-                agentic_content += chunk.content
-                if chunk.usage:
-                    self.last_usage = chunk.usage
-                yield chunk
+            elif current_node == NODE_TOOL_EXECUTOR:
+                next_node = NODE_SYNTHESIS  # default
+                async for chunk_or_next in self._node_tool_executor(state):
+                    if isinstance(chunk_or_next, str):
+                        next_node = chunk_or_next
+                    else:
+                        yield chunk_or_next
+                current_node = next_node
 
-            # Persist final agentic response
-            current_seq += 1
-            msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
-                role=MessageRole.ASSISTANT,
-                content=agentic_content,
-                sequence_number=current_seq,
-                metadata={"model": model, "type": "agentic", "plan": plan},
-                token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
-                token_count_completion=self.last_usage.completion_tokens
-                if self.last_usage
-                else None,
-                model=model,
-            )
-            # Fix 3.2: Fire-and-forget embeddings
-            asyncio.create_task(self._safe_embed(msg.id, agentic_content))
-            asyncio.create_task(self._safe_embed_user(conv_uuid, current_seq - 1))
+            elif current_node == NODE_REFLECTION:
+                next_node = await self._node_reflection(state)
+                if next_node == NODE_TOOL_EXECUTOR:
+                    yield StreamChunk(
+                        content="", status="Rethinking tool selection...", done=False
+                    )
+                current_node = next_node
 
-            # Summarization check
-            # Fix 3.2: Fire-and-forget summarization
-            if (current_seq - last_summarized_seq) >= 20:
-                asyncio.create_task(self._safe_summarize(
-                    conv_uuid, current_seq, last_summarized_seq, model
-                ))
+            elif current_node == NODE_SYNTHESIS:
+                async for chunk in self._node_synthesis(state):
+                    yield chunk
+                current_node = NODE_END
 
-            ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=intent).observe(
-                time.time() - start_time
-            )
-            return
+            else:
+                logger.error("Graph: unknown node '%s', breaking", current_node)
+                current_node = NODE_END
 
-        # --- Phase 6: Fast Path (SIMPLE) — One-shot flow ---
+            # --- Checkpoint: persist state after each node transition ---
+            await self._save_checkpoint(state, current_node, step)
+
+        if step >= max_graph_steps:
+            logger.error("Graph: circuit breaker hit at %d steps", max_graph_steps)
+
+        # --- Post-graph: Mark checkpoint complete + Summarization + Metrics ---
+        await self._clear_checkpoint(state.conv_uuid, state.checkpoint_id)
+
+        if (state.current_seq - state.last_summarized_seq) >= 20:
+            asyncio.create_task(self._safe_summarize(
+                state.conv_uuid, state.current_seq,
+                state.last_summarized_seq, state.model
+            ))
+
+        ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=state.intent).observe(
+            time.time() - state.start_time
+        )
+
+    # -------------------------------------------------------------------
+    # Checkpoint Persistence (Redis)
+    # -------------------------------------------------------------------
+    async def _save_checkpoint(
+        self, state: AgentState, current_node: str, step: int
+    ) -> None:
+        """Save a lightweight checkpoint to Redis after each node transition."""
+        try:
+            from chatbot_ai_system.database.redis import redis_client
+            key = f"checkpoint:{state.conv_uuid}:{state.checkpoint_id}"
+            data = state.to_checkpoint(current_node, step)
+            await redis_client.set(key, data, ttl=CHECKPOINT_TTL_SECONDS)
+            logger.debug("Checkpoint saved: %s (node=%s, step=%d)", key, current_node, step)
+        except Exception as e:
+            # Checkpointing is best-effort — never block the hot path
+            logger.warning("Checkpoint save failed: %s", e)
+
+    async def _load_checkpoint(self, conv_uuid: Any) -> Optional[dict]:
+        """Load the most recent incomplete checkpoint for a conversation."""
+        try:
+            from chatbot_ai_system.database.redis import redis_client
+            # Scan for checkpoint keys for this conversation
+            # Since we use a single checkpoint per execution, just try the pattern
+            if hasattr(redis_client, '_redis') and redis_client._redis:
+                keys = []
+                async for key in redis_client._redis.scan_iter(
+                    match=f"checkpoint:{conv_uuid}:*", count=10
+                ):
+                    keys.append(key)
+                if not keys:
+                    return None
+                # Get the most recent one
+                for key in keys:
+                    data = await redis_client.get(key)
+                    if data and isinstance(data, dict) and data.get("status") == "running":
+                        logger.info("Found incomplete checkpoint: %s", key)
+                        return data
+        except Exception as e:
+            logger.warning("Checkpoint load failed: %s", e)
+        return None
+
+    async def _clear_checkpoint(self, conv_uuid: Any, checkpoint_id: str) -> None:
+        """Remove a completed checkpoint from Redis."""
+        try:
+            from chatbot_ai_system.database.redis import redis_client
+            key = f"checkpoint:{conv_uuid}:{checkpoint_id}"
+            await redis_client.delete(key)
+            logger.debug("Checkpoint cleared: %s", key)
+        except Exception as e:
+            logger.warning("Checkpoint clear failed: %s", e)
+
+    # -------------------------------------------------------------------
+    # Node: Planner (wraps existing AgenticEngine)
+    # -------------------------------------------------------------------
+    async def _node_planner(self, state: AgentState) -> str:
+        """Plan + execute via the existing agentic engine for COMPLEX tasks."""
+        logger.info("Node[planner]: creating plan via AgenticEngine")
+        self.last_usage = None
+
+        conv_context = ""
+        if state.conv_summary:
+            conv_context = f"Previous context: {state.conv_summary}"
+
+        tool_names = [t["function"]["name"] for t in state.tools]
+        plan = await self.agentic_engine.create_plan(
+            state.user_input, state.model, tool_names, conv_context
+        )
+
+        # Execute plan with ReAct loop
+        agentic_content = ""
+        # We store chunks to yield them from _run_graph after this returns.
+        # But since _node_planner is called in the graph loop without yielding,
+        # we need to handle this differently — execute inline and persist.
+        async for chunk in self.agentic_engine.execute(
+            messages=state.messages,
+            model=state.model,
+            tools=state.tools,
+            plan=plan,
+            temperature=state.temperature,
+            max_tokens=state.max_tokens,
+        ):
+            if self._is_cancelled():
+                logger.info("Node[planner]: cancelled during agentic execution")
+                return NODE_END
+            agentic_content += chunk.content
+            if chunk.usage:
+                self.last_usage = chunk.usage
+            state.full_content = agentic_content
+            state.last_usage = self.last_usage
+
+        # Persist final agentic response
+        state.current_seq += 1
+        msg = await self.conversation_repo.add_message(
+            conversation_id=state.conv_uuid,
+            role=MessageRole.ASSISTANT,
+            content=agentic_content,
+            sequence_number=state.current_seq,
+            metadata={"model": state.model, "type": "agentic", "plan": plan},
+            token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
+            token_count_completion=self.last_usage.completion_tokens
+            if self.last_usage
+            else None,
+            model=state.model,
+        )
+        asyncio.create_task(self._safe_embed(msg.id, agentic_content))
+        asyncio.create_task(self._safe_embed_user(state.conv_uuid, state.current_seq - 1))
+
+        return NODE_END  # Agentic engine handles its own synthesis
+
+    # -------------------------------------------------------------------
+    # Node: Tool Executor (wraps existing Phase 6 + 7 logic)
+    # -------------------------------------------------------------------
+    async def _node_tool_executor(self, state: AgentState):
+        """
+        Yields StreamChunk objects during execution.
+        The LAST yielded value is a string indicating the next node.
+        """
+        # --- Phase 6: LLM streaming to extract tool calls ---
         current_tool_calls: List[ToolCall] = []
         full_content = ""
         raw_content = ""
-        self.last_usage = None  # Track usage from stream
+        self.last_usage = None
         phase6_max_tokens = (
-            min(max_tokens, SIMPLE_LISTING_PHASE6_MAX_TOKENS) if simple_listing_mode else max_tokens
+            min(state.max_tokens, SIMPLE_LISTING_PHASE6_MAX_TOKENS)
+            if state.simple_listing_mode else state.max_tokens
         )
 
-        # Streaming loop
         async for chunk in self.provider.stream(
-            messages=messages,
-            model=model,
-            temperature=temperature,
+            messages=state.messages,
+            model=state.model,
+            temperature=state.temperature,
             max_tokens=phase6_max_tokens,
-            tools=tools if tools else None,
+            tools=state.tools if state.tools else None,
         ):
-            # Fix 1.1: Check for cancellation
             if self._is_cancelled():
-                logger.info("Orchestrator cancelled during streaming")
+                logger.info("Node[tool_executor]: cancelled during streaming")
                 return
 
             raw_content += chunk.content
-            if not (requires_tool_execution and tools):
+            if not (state.requires_tool_execution and state.tools):
                 full_content += chunk.content
             if chunk.tool_calls:
                 logger.info(
-                    f"Phase 6: Detected {len(chunk.tool_calls)} tool calls from stream: {[tc.function.name for tc in chunk.tool_calls]}"
+                    "Phase 6: Detected %d tool calls from stream: %s",
+                    len(chunk.tool_calls),
+                    [tc.function.name for tc in chunk.tool_calls],
                 )
                 current_tool_calls.extend(chunk.tool_calls)
-                # Always emit tool call traces so REST clients can inspect execution path.
                 yield StreamChunk(content="", tool_calls=chunk.tool_calls, done=False)
 
-            if not current_tool_calls and not (requires_tool_execution and tools):
+            if not current_tool_calls and not (state.requires_tool_execution and state.tools):
                 yield chunk
-            else:
-                pass
 
-            if (phase == "MEDIUM" or expected_tool_calls == 1) and len(current_tool_calls) > 1:
+            if (state.phase == "MEDIUM" or state.expected_tool_calls == 1) and len(current_tool_calls) > 1:
                 logger.warning(
-                    "Phase 6: Tool call cap enforced (phase=%s, expected=%s). Slicing %s to 1.",
-                    phase,
-                    expected_tool_calls,
-                    len(current_tool_calls),
+                    "Phase 6: Tool call cap enforced (phase=%s, expected=%s). Slicing to 1.",
+                    state.phase, state.expected_tool_calls,
                 )
                 current_tool_calls = current_tool_calls[:1]
 
-            # Capture usage from the last chunk if present
             if chunk.usage:
                 self.last_usage = chunk.usage
 
-        # Check for fallback parsing (Phase 6b)
-        if not current_tool_calls and tools:
+        # Phase 6b: fallback parsing
+        if not current_tool_calls and state.tools:
             parsed = self.provider._try_parse_tool_calls(raw_content)
             if parsed:
-                logger.info(f"Phase 6b: Parsed {len(parsed)} tool calls from content fallback")
-                if (phase == "MEDIUM" or expected_tool_calls == 1) and len(parsed) > 1:
-                    logger.warning(
-                        "Phase 6b: Tool call cap enforced (phase=%s, expected=%s). Slicing %s to 1.",
-                        phase,
-                        expected_tool_calls,
-                        len(parsed),
-                    )
+                logger.info("Phase 6b: Parsed %d tool calls from content fallback", len(parsed))
+                if (state.phase == "MEDIUM" or state.expected_tool_calls == 1) and len(parsed) > 1:
                     current_tool_calls = parsed[:1]
                 else:
                     current_tool_calls = parsed
                 yield StreamChunk(content="", tool_calls=current_tool_calls, done=False)
 
-        # Guard: tool-dependent requests must produce an executable tool call (retry once with stricter prompt).
-        if requires_tool_execution and tools and not current_tool_calls:
-            logger.warning("Phase 6d: Required tool call missing — forcing one strict retry")
+        # Phase 6d: forced retry
+        if state.requires_tool_execution and state.tools and not current_tool_calls:
+            logger.warning("Phase 6d: Required tool call missing — forcing strict retry")
             yield StreamChunk(content="", status="Rethinking tool selection...", done=False)
             try:
-                forced_messages = list(messages) + [
-                    ChatMessage(
-                        role=MessageRole.SYSTEM,
-                        content=(
-                            "You must call exactly one available tool now. "
-                            "Return a tool call only. Do not provide natural language."
-                        ),
-                    )
+                forced_messages = list(state.messages) + [
+                    ChatMessage(role=MessageRole.SYSTEM, content=FORCED_TOOL_CALL_PROMPT)
                 ]
                 forced = await self.provider.complete(
                     messages=forced_messages,
-                    model=model,
+                    model=state.model,
                     temperature=0.0,
-                    max_tokens=min(max_tokens, FORCED_TOOL_CALL_MAX_TOKENS),
-                    tools=tools,
+                    max_tokens=min(state.max_tokens, FORCED_TOOL_CALL_MAX_TOKENS),
+                    tools=state.tools,
                 )
                 forced_tool_calls = forced.message.tool_calls
                 if not forced_tool_calls and forced.message.content:
                     forced_tool_calls = self.provider._try_parse_tool_calls(forced.message.content)
                 if forced_tool_calls:
-                    if (phase == "MEDIUM" or expected_tool_calls == 1) and len(forced_tool_calls) > 1:
-                        logger.warning(
-                            "Phase 6d: Tool call cap enforced (phase=%s, expected=%s). Slicing %s to 1.",
-                            phase,
-                            expected_tool_calls,
-                            len(forced_tool_calls),
-                        )
+                    if (state.phase == "MEDIUM" or state.expected_tool_calls == 1) and len(forced_tool_calls) > 1:
                         current_tool_calls = forced_tool_calls[:1]
                     else:
                         current_tool_calls = forced_tool_calls
@@ -1192,30 +1419,35 @@ class ChatOrchestrator:
                     yield StreamChunk(content="", tool_calls=current_tool_calls, done=False)
                 else:
                     full_content = self._build_fail_closed_response(
-                        intent=intent,
+                        intent=state.intent,
                         reason="Model did not return a valid tool call",
-                        tools=tools,
+                        tools=state.tools,
                     )
                     yield StreamChunk(content=full_content, done=True)
+                    state.full_content = full_content
+                    yield NODE_END
+                    return
             except Exception as e:
                 logger.error("Forced tool-call retry failed: %s", e)
                 full_content = self._build_fail_closed_response(
-                    intent=intent,
+                    intent=state.intent,
                     reason=f"Forced tool-call retry failed ({e})",
-                    tools=tools,
+                    tools=state.tools,
                 )
                 yield StreamChunk(content=full_content, done=True)
+                state.full_content = full_content
+                yield NODE_END
+                return
 
-        # Safety fallback: if LLM returned empty content AND no tool calls were captured,
-        # retry without tools to get a natural language response
-        if not full_content.strip() and not current_tool_calls and tools and not requires_tool_execution:
+        # Phase 6c: empty response fallback
+        if not full_content.strip() and not current_tool_calls and state.tools and not state.requires_tool_execution:
             logger.warning("Phase 6c: Empty response with tools — retrying without tools")
             full_content = ""
             self.last_usage = None
             async for chunk in self.provider.stream(
-                messages=messages,
-                model=model,
-                temperature=temperature,
+                messages=state.messages,
+                model=state.model,
+                temperature=state.temperature,
                 max_tokens=phase6_max_tokens,
                 tools=None,
             ):
@@ -1225,244 +1457,295 @@ class ChatOrchestrator:
                 yield chunk
 
         # --- Phase 7: Tool Execution ---
-        if current_tool_calls:
-            hitl_tools = set(get_hitl_tool_names())
-            if any(tc.function.name in hitl_tools for tc in current_tool_calls):
-                assistant_msg = ChatMessage(
-                    role=MessageRole.ASSISTANT,
-                    content=full_content,
-                    tool_calls=current_tool_calls,
-                )
-                messages.append(assistant_msg)
+        state.full_content = full_content
+        state.raw_content = raw_content
+        state.current_tool_calls = current_tool_calls
+        state.last_usage = self.last_usage
 
-                current_seq += 1
-                await self.conversation_repo.add_message(
-                    conversation_id=conv_uuid,
-                    role=MessageRole.ASSISTANT,
-                    content=full_content,
-                    sequence_number=current_seq,
-                    tool_calls=[t.model_dump() for t in current_tool_calls],
-                    metadata={"model": model, "requires_confirmation": True},
-                    token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
-                    token_count_completion=self.last_usage.completion_tokens
-                    if self.last_usage
-                    else None,
-                    model=model,
-                )
+        if not current_tool_calls:
+            # No tool calls — go straight to synthesis/persist
+            yield NODE_SYNTHESIS
+            return
 
-                yield StreamChunk(
-                    content="",
-                    status="Awaiting your confirmation...",
-                    tool_calls=current_tool_calls,
-                    done=False,
-                )
-                return
-
-            # Append assistant message with tool calls
+        # HITL check
+        hitl_tools = set(get_hitl_tool_names())
+        if any(tc.function.name in hitl_tools for tc in current_tool_calls):
             assistant_msg = ChatMessage(
-                role=MessageRole.ASSISTANT, content=full_content, tool_calls=current_tool_calls
-            )
-            messages.append(assistant_msg)
-
-            # Persist to DB
-            current_seq += 1
-            msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
                 role=MessageRole.ASSISTANT,
                 content=full_content,
-                sequence_number=current_seq,
+                tool_calls=current_tool_calls,
+            )
+            state.messages.append(assistant_msg)
+
+            state.current_seq += 1
+            await self.conversation_repo.add_message(
+                conversation_id=state.conv_uuid,
+                role=MessageRole.ASSISTANT,
+                content=full_content,
+                sequence_number=state.current_seq,
                 tool_calls=[t.model_dump() for t in current_tool_calls],
-                metadata={"model": model},
+                metadata={"model": state.model, "requires_confirmation": True},
                 token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
                 token_count_completion=self.last_usage.completion_tokens
                 if self.last_usage
                 else None,
-                model=model,
+                model=state.model,
             )
 
-            # Fix 3.2: Fire-and-forget embeddings (was blocking hot path)
-            asyncio.create_task(self._safe_embed(msg.id, full_content))
-            asyncio.create_task(self._safe_embed_user(conv_uuid, current_seq - 1))
+            yield StreamChunk(
+                content="",
+                status="Awaiting your confirmation...",
+                tool_calls=current_tool_calls,
+                done=False,
+            )
+            yield NODE_END
+            return
 
-            # Execute tools
-            successful_tool_names: List[str] = []
-            tool_errors: List[str] = []
-            for tool_call in current_tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = tool_call.function.arguments
-                original_tool_args = dict(tool_args or {})
-                if simple_listing_mode and tool_name == "directory_tree":
-                    tool_args = self._optimize_directory_tree_args(tool_args)
+        # Persist assistant message with tool calls
+        assistant_msg = ChatMessage(
+            role=MessageRole.ASSISTANT, content=full_content, tool_calls=current_tool_calls
+        )
+        state.messages.append(assistant_msg)
 
-                yield StreamChunk(content="", status=f"Executing {tool_name}...", done=False)
+        state.current_seq += 1
+        msg = await self.conversation_repo.add_message(
+            conversation_id=state.conv_uuid,
+            role=MessageRole.ASSISTANT,
+            content=full_content,
+            sequence_number=state.current_seq,
+            tool_calls=[t.model_dump() for t in current_tool_calls],
+            metadata={"model": state.model},
+            token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
+            token_count_completion=self.last_usage.completion_tokens
+            if self.last_usage
+            else None,
+            model=state.model,
+        )
 
-                tool_metadata: Dict[str, Any] = {"tool_name": tool_name, "truncated": False}
-                tool_error: Optional[str] = None
-                result = ""
-                success = False
+        asyncio.create_task(self._safe_embed(msg.id, full_content))
+        asyncio.create_task(self._safe_embed_user(state.conv_uuid, state.current_seq - 1))
+
+        # Execute each tool
+        successful_tool_names: List[str] = []
+        tool_errors: List[str] = []
+        for tool_call in current_tool_calls:
+            tool_name = tool_call.function.name
+            tool_args = tool_call.function.arguments
+            original_tool_args = dict(tool_args or {})
+            if state.simple_listing_mode and tool_name == "directory_tree":
+                tool_args = self._optimize_directory_tree_args(tool_args)
+
+            yield StreamChunk(content="", status=f"Executing {tool_name}...", done=False)
+
+            tool_metadata: Dict[str, Any] = {"tool_name": tool_name, "truncated": False}
+            tool_error: Optional[str] = None
+            result = ""
+            success = False
+            try:
+                tool_start = time.time()
+                tool = self.registry.get_tool(tool_name)
                 try:
-                    tool_start = time.time()
-                    tool = self.registry.get_tool(tool_name)
-                    try:
-                        raw_result = await tool.run(**tool_args)
-                    except Exception:
-                        # If constrained args are incompatible, retry once with original model args.
-                        if simple_listing_mode and tool_name == "directory_tree" and tool_args != original_tool_args:
-                            logger.warning(
-                                "directory_tree optimized args failed; retrying with original args"
-                            )
-                            raw_result = await tool.run(**original_tool_args)
-                        else:
-                            raise
-                    result, tool_metadata = self._prepare_tool_result(tool_name, raw_result)
-                    success = True
-                    TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
-                except Exception as e:
-                    logger.error(f"Tool execution failed: {e}")
-                    TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="error").inc()
-                    tool_error = str(e)
-                    tool_errors.append(f"{tool_name}: {e}")
-                    result = f"Error executing tool {tool_name}: {e}"
-                finally:
-                    TOOL_EXECUTION_DURATION_SECONDS.labels(tool_name=tool_name).observe(
-                        time.time() - tool_start
-                    )
+                    raw_result = await tool.run(**tool_args)
+                except Exception:
+                    if state.simple_listing_mode and tool_name == "directory_tree" and tool_args != original_tool_args:
+                        logger.warning("directory_tree optimized args failed; retrying with original args")
+                        raw_result = await tool.run(**original_tool_args)
+                    else:
+                        raise
+                result, tool_metadata = self._prepare_tool_result(tool_name, raw_result)
+                success = True
+                TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
+            except Exception as e:
+                logger.error("Tool execution failed: %s", e)
+                TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="error").inc()
+                tool_error = str(e)
+                tool_errors.append(f"{tool_name}: {e}")
+                result = f"Error executing tool {tool_name}: {e}"
 
-                # Optional verification step (selective)
-                if self._should_verify_tool_result(
-                    tool_name=tool_name,
-                    result_text=str(result),
-                    had_error=not success,
-                    router_confidence=router_confidence,
-                ):
-                    ok, reason = await self._verify_tool_result(
-                        user_input=user_input,
+                # --- Reflection: attempt self-correction on failure ---
+                if state.reflection_count < MAX_REFLECTION_RETRIES:
+                    should_retry, corrected = await self.reflection_handler.handle_error(
                         tool_name=tool_name,
-                        tool_args=tool_args,
-                        result_text=str(result),
-                        model=model,
+                        tool_args=original_tool_args,
+                        error=str(e),
+                        model=state.model,
+                        attempt=state.reflection_count,
                     )
-                    tool_metadata["verification_ok"] = ok
-                    tool_metadata["verification_reason"] = reason
-                    if not ok:
-                        success = False
-                        tool_errors.append(f"{tool_name}: {reason}")
-                        if not tool_error:
-                            tool_error = reason
-
-                if success:
-                    successful_tool_names.append(tool_name)
-
-                # Update tool reliability (best-effort)
-                try:
-                    await tool_reliability_store.update(
-                        tool_name, success=success, error=tool_error
-                    )
-                except Exception as e:
-                    logger.debug("Tool reliability update failed for %s: %s", tool_name, e)
-
-                # Persist result
-                current_seq += 1
-                tool_msg = ChatMessage(
-                    role=MessageRole.TOOL, content=str(result), tool_call_id=tool_call.id
-                )
-                messages.append(tool_msg)
-
-                await self.conversation_repo.add_message(
-                    conversation_id=conv_uuid,
-                    role=MessageRole.TOOL,
-                    content=str(result),
-                    sequence_number=current_seq,
-                    tool_call_id=tool_call.id,
-                    metadata=tool_metadata,
+                    if should_retry and corrected:
+                        state.reflection_count += 1
+                        corrected_args = corrected.get("arguments", {})
+                        logger.info(
+                            "Reflection: retrying '%s' with corrected args (attempt %d)",
+                            tool_name, state.reflection_count,
+                        )
+                        yield StreamChunk(
+                            content="",
+                            status=f"Retrying {tool_name} with corrected arguments...",
+                            done=False,
+                        )
+                        try:
+                            raw_result = await tool.run(**corrected_args)
+                            result, tool_metadata = self._prepare_tool_result(tool_name, raw_result)
+                            success = True
+                            tool_error = None
+                            tool_errors.pop()  # Remove the previous error
+                            TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
+                        except Exception as retry_e:
+                            logger.warning("Reflection retry also failed: %s", retry_e)
+                            result = f"Error executing tool {tool_name}: {retry_e}"
+                            tool_error = str(retry_e)
+            finally:
+                TOOL_EXECUTION_DURATION_SECONDS.labels(tool_name=tool_name).observe(
+                    time.time() - tool_start
                 )
 
+            # Verification step
+            if self._should_verify_tool_result(
+                tool_name=tool_name,
+                result_text=str(result),
+                had_error=not success,
+                router_confidence=state.router_confidence,
+            ):
+                ok, reason = await self._verify_tool_result(
+                    user_input=state.user_input,
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                    result_text=str(result),
+                    model=state.model,
+                )
+                tool_metadata["verification_ok"] = ok
+                tool_metadata["verification_reason"] = reason
+                if not ok:
+                    success = False
+                    tool_errors.append(f"{tool_name}: {reason}")
+                    if not tool_error:
+                        tool_error = reason
+
+            if success:
+                successful_tool_names.append(tool_name)
+
+            try:
+                await tool_reliability_store.update(tool_name, success=success, error=tool_error)
+            except Exception as e:
+                logger.debug("Tool reliability update failed for %s: %s", tool_name, e)
+
+            state.current_seq += 1
+            tool_msg = ChatMessage(
+                role=MessageRole.TOOL, content=str(result), tool_call_id=tool_call.id
+            )
+            state.messages.append(tool_msg)
+
+            await self.conversation_repo.add_message(
+                conversation_id=state.conv_uuid,
+                role=MessageRole.TOOL,
+                content=str(result),
+                sequence_number=state.current_seq,
+                tool_call_id=tool_call.id,
+                metadata=tool_metadata,
+            )
+
+        state.successful_tool_names = successful_tool_names
+        state.tool_errors = tool_errors
+        yield NODE_SYNTHESIS
+
+    # -------------------------------------------------------------------
+    # Node: Reflection (new capability)
+    # -------------------------------------------------------------------
+    async def _node_reflection(self, state: AgentState) -> str:
+        """
+        Evaluate tool results and decide whether to retry or proceed.
+        Currently invoked by _run_graph when tool executor yields NODE_REFLECTION.
+        """
+        if state.reflection_count >= MAX_REFLECTION_RETRIES:
+            logger.warning("Node[reflection]: max retries reached, proceeding to synthesis")
+            return NODE_SYNTHESIS
+
+        # If there are errors and no successes, reflection already tried inline
+        # in the tool executor. Just proceed to synthesis.
+        if state.tool_errors and not state.successful_tool_names:
+            return NODE_SYNTHESIS
+
+        return NODE_SYNTHESIS
+
+    # -------------------------------------------------------------------
+    # Node: Synthesis (wraps existing Phase 8 logic)
+    # -------------------------------------------------------------------
+    async def _node_synthesis(self, state: AgentState):
+        """Generates final response. Yields StreamChunk objects."""
+        if state.current_tool_calls:
             # --- Phase 8: Tool Result Feedback Loop ---
             synthesis_content = ""
-            self.last_usage = None  # Reset for synthesis
+            self.last_usage = None
             synthesis_max_tokens = (
-                min(max_tokens, SIMPLE_LISTING_SYNTHESIS_MAX_TOKENS)
-                if simple_listing_mode
-                else max_tokens
+                min(state.max_tokens, SIMPLE_LISTING_SYNTHESIS_MAX_TOKENS)
+                if state.simple_listing_mode
+                else state.max_tokens
             )
-            if requires_tool_execution and not successful_tool_names:
+
+            if state.requires_tool_execution and not state.successful_tool_names:
                 synthesis_content = self._build_clarification_response(
                     reason="All tool calls failed or could not be verified",
-                    tools=tools,
-                    tool_errors=tool_errors,
+                    tools=state.tools,
+                    tool_errors=state.tool_errors,
                 )
                 yield StreamChunk(content=synthesis_content, done=True)
             else:
                 async for chunk in self.provider.stream(
-                    messages=messages,
-                    model=model,
-                    temperature=temperature,
+                    messages=state.messages,
+                    model=state.model,
+                    temperature=state.temperature,
                     max_tokens=synthesis_max_tokens,
                     tools=None,
                 ):
                     synthesis_content += chunk.content
                     if chunk.usage:
                         self.last_usage = chunk.usage
-                    # For tool-critical flows, emit only validated final text to prevent
-                    # leaking intermediate speculative synthesis chunks.
-                    if not requires_tool_execution:
+                    if not state.requires_tool_execution:
                         yield chunk
 
-                if requires_tool_execution and self._response_contains_simulation(synthesis_content):
+                if state.requires_tool_execution and self._response_contains_simulation(synthesis_content):
                     synthesis_content = self._build_fail_closed_response(
-                        intent=intent,
+                        intent=state.intent,
                         reason="Model response contained simulated/unverified language",
-                        tools=tools,
-                        tool_errors=tool_errors,
+                        tools=state.tools,
+                        tool_errors=state.tool_errors,
                     )
-                if requires_tool_execution:
+                if state.requires_tool_execution:
                     yield StreamChunk(content=synthesis_content, done=True, usage=self.last_usage)
 
             # Persist synthesis
-            current_seq += 1
+            state.current_seq += 1
             msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
+                conversation_id=state.conv_uuid,
                 role=MessageRole.ASSISTANT,
                 content=synthesis_content,
-                sequence_number=current_seq,
-                metadata={"model": model, "type": "synthesis"},
+                sequence_number=state.current_seq,
+                metadata={"model": state.model, "type": "synthesis"},
                 token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
                 token_count_completion=self.last_usage.completion_tokens
                 if self.last_usage
                 else None,
-                model=model,
+                model=state.model,
             )
             asyncio.create_task(self._safe_embed(msg.id, synthesis_content))
 
         else:
-            # Persist final response
-            current_seq += 1
+            # No tool calls — persist the direct LLM response
+            state.current_seq += 1
             msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
+                conversation_id=state.conv_uuid,
                 role=MessageRole.ASSISTANT,
-                content=full_content,
-                sequence_number=current_seq,
-                metadata={"model": model},
-                token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
-                token_count_completion=self.last_usage.completion_tokens
-                if self.last_usage
+                content=state.full_content,
+                sequence_number=state.current_seq,
+                metadata={"model": state.model},
+                token_count_prompt=state.last_usage.prompt_tokens if state.last_usage else None,
+                token_count_completion=state.last_usage.completion_tokens
+                if state.last_usage
                 else None,
-                model=model,
+                model=state.model,
             )
-            # Fix 3.2: Fire-and-forget + removed duplicate embed call
-            asyncio.create_task(self._safe_embed(msg.id, full_content))
-            asyncio.create_task(self._safe_embed_user(conv_uuid, current_seq - 1))
-
-        # --- Phase 9: Background Summarization (Fix 3.2: fire-and-forget) ---
-        if (current_seq - last_summarized_seq) >= 20:
-            asyncio.create_task(self._safe_summarize(
-                conv_uuid, current_seq, last_summarized_seq, model
-            ))
-
-        # Record total duration
-        ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=intent).observe(
-            time.time() - start_time
-        )
+            asyncio.create_task(self._safe_embed(msg.id, state.full_content))
+            asyncio.create_task(self._safe_embed_user(state.conv_uuid, state.current_seq - 1))
 
     async def _summarize_conversation(
         self, conversation_id: Any, current_seq: int, last_seq: int, model: str
@@ -1487,12 +1770,7 @@ class ChatOrchestrator:
 
             text_to_summarize = "\n".join([f"{m.role}: {m.content}" for m in messages_to_summarize])
 
-            summary_prompt = (
-                "Summarize the following conversation segment efficiently. "
-                "Focus on key facts, user preferences, and important decisions. "
-                "Do not lose important details.\n\n"
-                f"{text_to_summarize}"
-            )
+            summary_prompt = SUMMARIZE_PROMPT_TEMPLATE.format(text=text_to_summarize)
 
             # Call LLM for summary
             response = await self.provider.complete(
@@ -1516,12 +1794,9 @@ class ChatOrchestrator:
             old_summary = current_summary_data["summary"] if current_summary_data else ""
 
             if old_summary:
-                update_prompt = (
-                    "Here is the previous conversation summary:\n"
-                    f"{old_summary}\n\n"
-                    "Here is the new conversation segment:\n"
-                    f"{new_segment_summary}\n\n"
-                    "Create a consolidated summary of the entire conversation. Keep it concise."
+                update_prompt = CONSOLIDATE_SUMMARY_PROMPT_TEMPLATE.format(
+                    old_summary=old_summary,
+                    new_summary=new_segment_summary,
                 )
                 response = await self.provider.complete(
                     messages=[ChatMessage(role=MessageRole.USER, content=update_prompt)],
@@ -1611,15 +1886,7 @@ class ChatOrchestrator:
         classifier_messages = [
             ChatMessage(
                 role=MessageRole.SYSTEM,
-                content=(
-                    "You are an intent classifier. Analyze the user's request.\n"
-                    "Categories:\n"
-                    "1. GIT: Version control, commits, branches, diffs.\n"
-                    "2. FILESYSTEM: Reading/writing files, listing directories, searching.\n"
-                    "3. FETCH: Web requests, extracting content from URLs.\n"
-                    "4. GENERAL: General knowledge, coding advice (without file access), greetings.\n"
-                    "Output ONLY the category name (e.g., 'GIT')."
-                ),
+                content=INTENT_CLASSIFIER_PROMPT,
             ),
             ChatMessage(role=MessageRole.USER, content=user_input),
         ]
@@ -1644,35 +1911,4 @@ class ChatOrchestrator:
         """
         Get the appropriate system prompt based on phase and tool availability.
         """
-        base_prompt = "You are a helpful AI assistant."
-
-        phase = phase.upper()
-        if phase == "GENERAL":
-            base_prompt += (
-                "\nBe concise and direct. Ask a clarifying question if the request is ambiguous. "
-                "Admit uncertainty when needed. Do not mention tools."
-            )
-        elif phase == "MEDIUM":
-            base_prompt += (
-                "\nPrefer a single-step solution. If tools are needed, call at most one tool. "
-                "After using a tool, answer plainly and briefly."
-            )
-        else:
-            base_prompt += (
-                "\nHandle multi-step tasks carefully. Use tools when required and verify outputs "
-                "before concluding."
-            )
-
-        if not has_tools:
-            return base_prompt + "\nAnswer using your internal knowledge."
-
-        tool_instructions = (
-            "\nYou have access to external tools via MCP.\n"
-            "1. If the user's request requires it, call the appropriate tool.\n"
-            "2. Output a valid JSON tool call.\n"
-            "3. Use tool results as the source of truth.\n"
-            "4. Never claim an action/result unless a tool output in this conversation proves it.\n"
-            "5. Never simulate, assume, or fabricate execution."
-        )
-
-        return base_prompt + tool_instructions
+        return build_system_prompt(phase, has_tools)
