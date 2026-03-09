@@ -238,17 +238,33 @@ flowchart TD
 
 ProdBot dynamically loads [Model Context Protocol](https://modelcontextprotocol.io/) servers based on your `.env` configuration:
 
-| Category | Tools |
-|----------|-------|
-| **Core** | Filesystem, Time, Memory (Knowledge Graph), PostgreSQL |
-| **Research** | Brave Search, Puppeteer, Fetch (HTTP) |
-| **Developer** | Git, GitHub, Docker, E2B Code Interpreter |
-| **Brain** | Sequential Thinking, SQLite |
-| **Connectors** | Slack, Google Maps, Sentry |
+| Category | Tools | Env Key Required |
+|----------|-------|------------------|
+| **Core** | Filesystem, Time, Memory (Knowledge Graph), PostgreSQL | None (built-in) |
+| **Research** | Brave Search, Puppeteer, Fetch (HTTP) | `BRAVE_API_KEY` |
+| **Developer** | Git, GitHub, Docker, E2B Code Interpreter | `GITHUB_TOKEN`, `E2B_API_KEY` |
+| **Brain** | Sequential Thinking, SQLite | None (built-in) |
+| **Connectors** | Slack, Google Maps, Sentry | `SLACK_BOT_TOKEN`, `GOOGLE_MAPS_API_KEY`, `SENTRY_AUTH_TOKEN` |
 
-> [!NOTE]
-> Each MCP server activates only when the corresponding API key is present in `.env`.
-> See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for setup instructions.
+<details>
+<summary><strong>⚙️ How to Enable / Update MCP Tools</strong></summary>
+
+1. Open your `.env` file and add the API key for the tool you want to enable:
+   ```bash
+   # Example: Enable web search
+   BRAVE_API_KEY=your-brave-api-key
+
+   # Example: Enable GitHub integration
+   GITHUB_TOKEN=ghp_your-github-token
+   ```
+2. Restart the backend — ProdBot auto-discovers available servers on startup
+3. The tool is now available to the chatbot's orchestrator and will be used when relevant
+
+> Tools without required API keys (Filesystem, Time, Git, Sequential Thinking, SQLite) work **out of the box** with zero configuration.
+
+See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for the complete setup guide with all available servers.
+
+</details>
 
 ---
 
@@ -262,6 +278,31 @@ ProdBot dynamically loads [Model Context Protocol](https://modelcontextprotocol.
 | **Data** | PostgreSQL · pgvector · Redis · Hybrid 3-tier memory |
 | **Frontend** | Next.js 14 · TypeScript · Tailwind CSS |
 | **DevOps** | Docker Compose · Prometheus · Grafana · Node Exporter |
+
+---
+
+## 💬 Personal Assistant Mode
+
+ProdBot goes beyond generic chatbots — it can connect to your **personal communication platforms** and act as a context-aware assistant across your digital life.
+
+| Platform | Capability | How It Works |
+|----------|------------|-------------|
+| **Gmail** | Read, search, draft emails | OAuth-based via MCP server — drafts land in your Gmail Drafts folder |
+| **Telegram** | Read chats, send messages | Local MTProto client (Telethon) — your session, your machine |
+| **LinkedIn** | Read inbox messages | Headless browser automation (Playwright) |
+| **Slack** | Send messages, read channels | Official Slack Bot Token via MCP |
+| **WhatsApp** | Read/send messages | Planned — Phase 2 rollout |
+| **Line** | Read/send messages | Planned — Phase 2 rollout |
+
+**Key design principles:**
+- 🔒 **Local-first** — All credentials stay on your machine. No cloud auth, no data leaves your infrastructure
+- ✋ **Human-in-the-loop** — ProdBot *never* sends messages without your explicit approval. Every outgoing message goes through a **Draft Card** UI where you can edit, regenerate, or cancel
+- 🎛️ **Granular permissions** — Control Read / Draft / Send permissions per platform from the Plugins dashboard
+- 🔍 **On-demand retrieval** — ProdBot doesn't pre-index your messages. It searches your platforms in real-time when asked
+
+> [!TIP]
+> All personal integrations are gated behind **feature flags** (off by default). Enable them individually when ready.
+> See [docs/personal_platform_integration.md](docs/personal_platform_integration.md) for the full specification.
 
 ---
 
@@ -285,7 +326,11 @@ PYTHONPATH=src .venv/bin/python tests/test_media_pipeline.py
 
 ## 📖 Learn & Build: Phase by Phase
 
-> **Built for learners.** Every phase has detailed documentation explaining *what* was built, *why* it was designed that way, and *how* it works under the hood. Start from Phase 1 and build your understanding incrementally.
+> [!TIP]
+> **New here?** ProdBot was built incrementally across 20+ phases — each with detailed documentation explaining *what* was built, *why* it was designed that way, and *how* it works under the hood. Start from Phase 1 and build your understanding of production AI systems step by step.
+
+<details>
+<summary><strong>📚 Click to expand full Phase Documentation</strong></summary>
 
 | Phase | What You'll Learn | Docs |
 |-------|-------------------|------|
@@ -296,21 +341,58 @@ PYTHONPATH=src .venv/bin/python tests/test_media_pipeline.py
 | **2.0** | Data persistence & user memory (PostgreSQL) | [Phase 2.0](docs/phase_2.0.md) |
 | **2.2** | Embedding & semantic search (pgvector) | [Phase 2.2](docs/phase_2.2.md) |
 | **2.5** | Observability & schema scaling | [Phase 2.5](docs/phase_2.5.md) |
-| **2.6** | Sliding window context (hot memory) | — |
-| **2.7** | Conversation summarization (warm memory) | — |
+| **2.6–2.7** | Sliding window (hot memory) & summarization (warm memory) | — |
 | **3.0** | Redis caching & performance optimization | [Phase 3.0](docs/phase_3.0.md) |
-| **4.0** | Prometheus & Grafana observability | [Phase 4.0](docs/phase_4.0.md) |
-| **4.1** | Observability hardening & validation | [Phase 4.1](docs/phase_4.1.md) |
+| **4.0–4.1** | Prometheus & Grafana observability (setup + hardening) | [Phase 4.0](docs/phase_4.0.md) · [4.1](docs/phase_4.1.md) |
 | **5.0** | Multimodal input & voice conversation | [Phase 5.0](docs/phase_5.0.md) |
-| **5.5** | Performance optimization & reliability | [Phase 5.5](docs/phase_5.5.md) |
-| **6.0** | Multi-provider LLM orchestration | [Phase 6.0](docs/phase_6.0.md) |
+| **5.5** | Performance optimization & adaptive routing | [Phase 5.5](docs/phase_5.5.md) |
+| **6.0** | Multi-provider LLM orchestration (OpenAI, Anthropic, Gemini) | [Phase 6.0](docs/phase_6.0.md) |
 | **6.5** | Free tool integration (web search & coding) | [Phase 6.5](docs/phase_6.5.md) |
-| **7.0** | Model integration & system hardening | [Phase 7.0](docs/phase_7.0.md) |
-| **7.1** | Production hardening — deep audit & 12 critical fixes | [Phase 7.1](docs/phase_7.1.md) |
+| **7.0–7.1** | System hardening — deep audit & 12 critical fixes | [Phase 7.0](docs/phase_7.0.md) · [7.1](docs/phase_7.1.md) |
 | **8.0–8.1** | Red-team testing & behavioral benchmarks | [Phase 8.0](docs/phase8.0_testing.md) |
 | **9.0** | Personal platform integration (Gmail/Telegram/LinkedIn) | [Phase 9.0](docs/phase9.0.md) |
 | **9.1** | Stabilization & functional evaluation | [Testing](docs/phase8.0_testing.md) |
-| **10.0** | Authentication & multi-tenancy *(in progress)* | [Phase 10.0](docs/phase10.0.md) |
+| **10.0** | Orchestrator & routing reliability upgrade | [Phase 10.0](docs/phase10.0.md) |
+| **10.1** | State-machine graph engine & multi-agent handoff | [Phase 10.1](docs/phase_10.1.md) |
+
+</details>
+
+---
+
+## 🗺️ Roadmap
+
+### ✅ What's Built (Infrastructure Complete)
+
+- [x] Core chat engine with open-source LLM (Ollama)
+- [x] 9-phase chat orchestrator with intent classification & context injection
+- [x] Agentic engine — Plan + ReAct loop with cycle detection & circuit breaker
+- [x] Adaptive routing — trivial, fast, tool, and agentic execution paths
+- [x] Multimodal input — image (LLaVA), audio (Whisper), video (OpenCV keyframes)
+- [x] Real-time voice conversation — full-duplex WebSocket with STT + TTS
+- [x] 15+ MCP tool servers — filesystem, Git, GitHub, web search, Docker, Slack, and more
+- [x] Hybrid 3-tier memory — hot (sliding window), warm (summarization), cold (pgvector)
+- [x] Multi-provider LLM — Ollama, OpenAI, Anthropic, Gemini with runtime switching
+- [x] PostgreSQL persistence with pgvector for semantic search
+- [x] Redis caching layer for context, sessions, and tool reliability scores
+- [x] Full observability — Prometheus, Grafana dashboards, health checks
+- [x] Production hardening — deep audit, 12 critical fixes, red-team tested
+- [x] Behavioral evaluation — benchmark suite with trajectory tracking
+- [x] Personal platform integration — Gmail, Telegram, LinkedIn (local-first, human-in-the-loop)
+- [x] Graph-based state-machine orchestrator with multi-agent handoff
+- [x] Redis checkpointing for crash-resilient execution
+- [x] Tool reliability tracking with EMA scoring
+- [x] Reflection engine — automatic LLM self-correction on tool failures
+
+### 🔮 What's Next (Production Readiness)
+
+- [ ] **Authentication & Multi-Tenancy** — JWT auth, user isolation, org-level access control
+- [ ] **WhatsApp & Line Integration** — Expand personal assistant to Phase 2 platforms
+- [ ] **Cross-Platform Contacts & Calendar** — Unified identity resolution across platforms
+- [ ] **Multi-Agent Parallel Execution** — Run multiple agents concurrently for complex tasks
+- [ ] **RAG Pipeline Enhancement** — Document ingestion, chunking strategies, retrieval tuning
+- [ ] **Kubernetes Deployment** — Helm charts, horizontal scaling, production k8s manifests
+- [ ] **CI/CD Pipeline** — Automated testing, linting, and deployment on push
+- [ ] **Admin Dashboard** — User management, usage analytics, system health overview
 
 ---
 
