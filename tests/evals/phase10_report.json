@@ -1,0 +1,3891 @@
+{
+  "total": 116,
+  "passed": 116,
+  "failed": 0,
+  "results": [
+    {
+      "test_id": "G-001",
+      "query": "Hello",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-002",
+      "query": "Hi there",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-003",
+      "query": "How are you?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-004",
+      "query": "Thanks",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-005",
+      "query": "What is Python?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-006",
+      "query": "Explain git in simple terms",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-007",
+      "query": "What is 2+2?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-008",
+      "query": "Tell me a joke",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-009",
+      "query": "Summarize the idea of recursion",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-010",
+      "query": "What is a database?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-011",
+      "query": "How does HTTP work?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-012",
+      "query": "What is JSON?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-013",
+      "query": "Define machine learning",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-014",
+      "query": "Explain REST APIs",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-015",
+      "query": "What is unit testing?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-016",
+      "query": "Why use version control?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-017",
+      "query": "Give me a short poem",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-018",
+      "query": "What is a monorepo?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-019",
+      "query": "Explain TCP vs UDP",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-020",
+      "query": "What is a cache?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-021",
+      "query": "Explain Docker in one paragraph",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-022",
+      "query": "What is concurrency?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-023",
+      "query": "What is OAuth?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-024",
+      "query": "What is load balancing?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-025",
+      "query": "Explain hashing",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-026",
+      "query": "Explain logging levels",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-027",
+      "query": "What is latency?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-028",
+      "query": "What is a CDN?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-029",
+      "query": "Explain TLS",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "G-030",
+      "query": "What is an ORM?",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "domain:none"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-031",
+      "query": "What time is it right now?",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-032",
+      "query": "Current time in Tokyo",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-033",
+      "query": "UTC time please",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-034",
+      "query": "Timestamp now please",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "get_timestamp"
+      ],
+      "tool_calls_detected": [
+        "get_timestamp"
+      ],
+      "status_messages": [
+        "Executing get_timestamp..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-035",
+      "query": "time now",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-036",
+      "query": "what's the time",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-037",
+      "query": "time in Paris",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-038",
+      "query": "timezone for PST?",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-039",
+      "query": "what time is it in New York",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-040",
+      "query": "current time UTC",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-041",
+      "query": "timestamp",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "get_timestamp"
+      ],
+      "tool_calls_detected": [
+        "get_timestamp"
+      ],
+      "status_messages": [
+        "Executing get_timestamp..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "T-042",
+      "query": "what time is it",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "time"
+      ],
+      "actual_domains": [
+        "time"
+      ],
+      "executed_tools": [
+        "current_time"
+      ],
+      "tool_calls_detected": [
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing current_time..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:time",
+        "deterministic"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-043",
+      "query": "git status",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_status"
+      ],
+      "tool_calls_detected": [
+        "git_status"
+      ],
+      "status_messages": [
+        "Executing git_status..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-044",
+      "query": "Show me git log",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_log"
+      ],
+      "tool_calls_detected": [
+        "git_log"
+      ],
+      "status_messages": [
+        "Executing git_log..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-045",
+      "query": "git branch",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_branch"
+      ],
+      "tool_calls_detected": [
+        "git_branch"
+      ],
+      "status_messages": [
+        "Executing git_branch..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-046",
+      "query": "git diff",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_diff"
+      ],
+      "tool_calls_detected": [
+        "git_diff"
+      ],
+      "status_messages": [
+        "Executing git_diff..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-047",
+      "query": "git checkout main",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_checkout"
+      ],
+      "tool_calls_detected": [
+        "git_checkout"
+      ],
+      "status_messages": [
+        "Executing git_checkout..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-048",
+      "query": "show git status",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_status"
+      ],
+      "tool_calls_detected": [
+        "git_status"
+      ],
+      "status_messages": [
+        "Executing git_status..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-049",
+      "query": "git commit history",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_log"
+      ],
+      "tool_calls_detected": [
+        "git_log"
+      ],
+      "status_messages": [
+        "Executing git_log..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-050",
+      "query": "git status for this repo",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_status"
+      ],
+      "tool_calls_detected": [
+        "git_status"
+      ],
+      "status_messages": [
+        "Executing git_status..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-051",
+      "query": "show git branches",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_branch"
+      ],
+      "tool_calls_detected": [
+        "git_branch"
+      ],
+      "status_messages": [
+        "Executing git_branch..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "GIT-052",
+      "query": "git diff last commit",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "git"
+      ],
+      "actual_domains": [
+        "git"
+      ],
+      "executed_tools": [
+        "git_diff"
+      ],
+      "tool_calls_detected": [
+        "git_diff"
+      ],
+      "status_messages": [
+        "Executing git_diff..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:git"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-053",
+      "query": "Open https://example.com",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-054",
+      "query": "Fetch https://example.com",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-055",
+      "query": "Browse https://example.com",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-056",
+      "query": "Search the web for cats",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "web_search"
+      ],
+      "tool_calls_detected": [
+        "web_search"
+      ],
+      "status_messages": [
+        "Executing web_search..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-057",
+      "query": "Look up the Eiffel Tower online",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "web_search"
+      ],
+      "tool_calls_detected": [
+        "web_search"
+      ],
+      "status_messages": [
+        "Executing web_search..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-058",
+      "query": "Find online info about pandas",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "web_search"
+      ],
+      "tool_calls_detected": [
+        "web_search"
+      ],
+      "status_messages": [
+        "Executing web_search..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-059",
+      "query": "Open https://example.com/page",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-060",
+      "query": "Download https://example.com/file",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-061",
+      "query": "Search the web for latest Python version",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "web_search"
+      ],
+      "tool_calls_detected": [
+        "web_search"
+      ],
+      "status_messages": [
+        "Executing web_search..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-062",
+      "query": "fetch https://example.com/docs",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-063",
+      "query": "Open https://example.com and summarize",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "F-064",
+      "query": "search the web for climate data",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "web_search"
+      ],
+      "tool_calls_detected": [
+        "web_search"
+      ],
+      "status_messages": [
+        "Executing web_search..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:fetch",
+        "network"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-065",
+      "query": "List files in this folder",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "directory_tree"
+      ],
+      "tool_calls_detected": [
+        "directory_tree"
+      ],
+      "status_messages": [
+        "Executing directory_tree..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-066",
+      "query": "Read ./README.md",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-067",
+      "query": "Open docs/phase10.0.md",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-068",
+      "query": "Show package.json",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-069",
+      "query": "List directory",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "directory_tree"
+      ],
+      "tool_calls_detected": [
+        "directory_tree"
+      ],
+      "status_messages": [
+        "Executing directory_tree..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-070",
+      "query": "Create file notes.txt with hello",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "write_file"
+      ],
+      "tool_calls_detected": [
+        "write_file"
+      ],
+      "status_messages": [
+        "Executing write_file..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-071",
+      "query": "Write a note to notes.txt",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "write_file"
+      ],
+      "tool_calls_detected": [
+        "write_file"
+      ],
+      "status_messages": [
+        "Executing write_file..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-072",
+      "query": "Delete file ./tmp.txt",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "delete_file"
+      ],
+      "tool_calls_detected": [
+        "delete_file"
+      ],
+      "status_messages": [
+        "Executing delete_file..."
+      ],
+      "verification_triggered": true,
+      "final_content": "I couldn't verify the tool result well enough to answer safely. Reason: All tool calls failed or could not be verified. Tool issues: delete_file: simulated tool error, delete_file: simulated. Availabl",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-073",
+      "query": "Remove ./tmp.txt",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "delete_file"
+      ],
+      "tool_calls_detected": [
+        "delete_file"
+      ],
+      "status_messages": [
+        "Executing delete_file..."
+      ],
+      "verification_triggered": true,
+      "final_content": "I couldn't verify the tool result well enough to answer safely. Reason: All tool calls failed or could not be verified. Tool issues: delete_file: simulated tool error, delete_file: simulated. Availabl",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-074",
+      "query": "Update ./README.md",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "write_file"
+      ],
+      "tool_calls_detected": [
+        "write_file"
+      ],
+      "status_messages": [
+        "Executing write_file..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-075",
+      "query": "Read file /etc/hosts",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-076",
+      "query": "List files here",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "directory_tree"
+      ],
+      "tool_calls_detected": [
+        "directory_tree"
+      ],
+      "status_messages": [
+        "Executing directory_tree..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-077",
+      "query": "Show me the directory tree",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "directory_tree"
+      ],
+      "tool_calls_detected": [
+        "directory_tree"
+      ],
+      "status_messages": [
+        "Executing directory_tree..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-078",
+      "query": "Open ./pyproject.toml",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-079",
+      "query": "Read tests/evals/phase10_cases.csv",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "FS-080",
+      "query": "Show contents of docs/phase10.0_testing.md",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:filesystem"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-081",
+      "query": "select * from users",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "query"
+      ],
+      "tool_calls_detected": [
+        "query"
+      ],
+      "status_messages": [
+        "Executing query..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-082",
+      "query": "create table test(id int)",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "create_table"
+      ],
+      "tool_calls_detected": [
+        "create_table"
+      ],
+      "status_messages": [
+        "Executing create_table..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-083",
+      "query": "insert into users values(1)",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "insert_record"
+      ],
+      "tool_calls_detected": [
+        "insert_record"
+      ],
+      "status_messages": [
+        "Executing insert_record..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-084",
+      "query": "update users set name='a'",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "execute"
+      ],
+      "tool_calls_detected": [
+        "execute"
+      ],
+      "status_messages": [
+        "Executing execute..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-085",
+      "query": "delete from users where id=1",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "execute"
+      ],
+      "tool_calls_detected": [
+        "execute"
+      ],
+      "status_messages": [
+        "Executing execute..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-086",
+      "query": "drop table users",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "drop_table"
+      ],
+      "tool_calls_detected": [
+        "drop_table"
+      ],
+      "status_messages": [
+        "Executing drop_table..."
+      ],
+      "verification_triggered": true,
+      "final_content": "I couldn't verify the tool result well enough to answer safely. Reason: All tool calls failed or could not be verified. Tool issues: drop_table: simulated tool error, drop_table: simulated. Available ",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-087",
+      "query": "select count(*) from users",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "query"
+      ],
+      "tool_calls_detected": [
+        "query"
+      ],
+      "status_messages": [
+        "Executing query..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-088",
+      "query": "create table items(id int)",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "create_table"
+      ],
+      "tool_calls_detected": [
+        "create_table"
+      ],
+      "status_messages": [
+        "Executing create_table..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-089",
+      "query": "insert into items values(2)",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "insert_record"
+      ],
+      "tool_calls_detected": [
+        "insert_record"
+      ],
+      "status_messages": [
+        "Executing insert_record..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-090",
+      "query": "select * from items",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "query"
+      ],
+      "tool_calls_detected": [
+        "query"
+      ],
+      "status_messages": [
+        "Executing query..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-091",
+      "query": "update items set id=3",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "execute"
+      ],
+      "tool_calls_detected": [
+        "execute"
+      ],
+      "status_messages": [
+        "Executing execute..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "SQL-092",
+      "query": "delete from items",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "sqlite"
+      ],
+      "actual_domains": [
+        "sqlite"
+      ],
+      "executed_tools": [
+        "execute"
+      ],
+      "tool_calls_detected": [
+        "execute"
+      ],
+      "status_messages": [
+        "Executing execute..."
+      ],
+      "verification_triggered": true,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "domain:sqlite",
+        "side_effect"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-093",
+      "query": "Compare file A and file B",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-094",
+      "query": "Read README and summarize",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-095",
+      "query": "Find the bug in src and summarize",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-096",
+      "query": "Open https://example.com and summarize",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-097",
+      "query": "Search the web for pandas then summarize",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-098",
+      "query": "Read docs/phase10.0.md and extract key changes",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-099",
+      "query": "List files and then show git status",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-100",
+      "query": "Fetch https://example.com then summarize",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-101",
+      "query": "Read file X and compare to file Y",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-102",
+      "query": "Search web for cats and list results",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-103",
+      "query": "Read README.md and check for TODO",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-104",
+      "query": "Open docs and summarize differences",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-105",
+      "query": "Fetch URL and extract title",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-106",
+      "query": "Search for API docs then summarize",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-107",
+      "query": "List directory and then read README",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-108",
+      "query": "Check git status and then show diff",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-109",
+      "query": "Compare two files and explain changes",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-110",
+      "query": "Search online then update local notes",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-111",
+      "query": "Read error log and find root cause",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "C-112",
+      "query": "Analyze code and suggest fixes",
+      "expected_phase": "COMPLEX",
+      "actual_phase": "COMPLEX",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [
+        "\ud83d\udccb Plan (2 steps):\n1. Read files\n2. Summarize",
+        "\ud83d\udccb Step 1/2: Calling current_time...",
+        "\ud83d\udccb Step 1/2: current_time \u2705",
+        "\ud83d\udccb Step 2/2: Synthesizing final answer... \u2705"
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:complex",
+        "multi_step"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "E-113",
+      "query": "Router malformed JSON test",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "fetch"
+      ],
+      "actual_domains": [
+        "fetch"
+      ],
+      "executed_tools": [
+        "fetch_html"
+      ],
+      "tool_calls_detected": [
+        "fetch_html"
+      ],
+      "status_messages": [
+        "Executing fetch_html..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "mock_only"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "E-114",
+      "query": "Router low confidence fallback",
+      "expected_phase": "GENERAL",
+      "actual_phase": "GENERAL",
+      "expected_tool_required": false,
+      "actual_tool_required": false,
+      "expected_domains": [],
+      "actual_domains": [],
+      "executed_tools": [],
+      "tool_calls_detected": [],
+      "status_messages": [],
+      "verification_triggered": false,
+      "final_content": "ok",
+      "coverage_tags": [
+        "phase:general",
+        "mock_only"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "E-115",
+      "query": "Tool spam in medium",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file",
+        "current_time"
+      ],
+      "status_messages": [
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "mock_only"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test_id": "E-116",
+      "query": "Forced retry tool selection",
+      "expected_phase": "MEDIUM",
+      "actual_phase": "MEDIUM",
+      "expected_tool_required": true,
+      "actual_tool_required": true,
+      "expected_domains": [
+        "filesystem"
+      ],
+      "actual_domains": [
+        "filesystem"
+      ],
+      "executed_tools": [
+        "read_file"
+      ],
+      "tool_calls_detected": [
+        "read_file"
+      ],
+      "status_messages": [
+        "Rethinking tool selection...",
+        "Executing read_file..."
+      ],
+      "verification_triggered": false,
+      "final_content": "final answer",
+      "coverage_tags": [
+        "phase:medium",
+        "mock_only"
+      ],
+      "passed": true,
+      "checks": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  ]
+}

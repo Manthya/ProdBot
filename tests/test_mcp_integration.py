@@ -26,10 +26,13 @@ async def main():
     registry.register_mcp_client(client)
     
     try:
-        print("Fetching tools...")
+        print("Refreshing tools from MCP...")
+        await registry.refresh_remote_tools()
+        
+        print("Fetching tools for 'add' query...")
         # First call might take a moment to connect
-        tools = await registry.get_ollama_tools()
-        print(f"Found {len(tools)} tools (including local ones).")
+        tools = await registry.get_ollama_tools(query="add numbers")
+        print(f"Found {len(tools)} tools matching query.")
         
         # Verify 'add' tool is present
         add_tool = next((t for t in tools if t['function']['name'] == 'add'), None)

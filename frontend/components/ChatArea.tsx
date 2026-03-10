@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RefreshCw, Copy, ThumbsUp, ThumbsDown, Wrench } from 'lucide-react';
 
@@ -13,9 +13,79 @@ interface ChatAreaProps {
     messages: Message[];
     isLoading?: boolean;
     statusMessage?: string;
+    onSendDraft?: (toolCall: any, updatedArgs: Record<string, any>) => Promise<void>;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({ messages, isLoading, statusMessage }) => {
+const DRAFT_TOOL_FIELDS: Record<string, string[]> = {
+    gmail_draft: ['to', 'subject', 'body'],
+    telegram_send: ['recipient_id', 'text'],
+    linkedin_send: ['recipient_id', 'text'],
+    linkedin_send_message: ['recipient_id', 'text'],
+};
+
+const DraftCard: React.FC<{
+    toolCall: any;
+    onSend: (args: Record<string, any>) => Promise<void>;
+}> = ({ toolCall, onSend }) => {
+    const initialArgs = toolCall?.function?.arguments || {};
+    const [draftArgs, setDraftArgs] = useState<Record<string, any>>(initialArgs);
+    const [sending, setSending] = useState(false);
+
+    const fields = DRAFT_TOOL_FIELDS[toolCall?.function?.name] || Object.keys(initialArgs);
+
+    const handleChange = (key: string, value: string) => {
+        setDraftArgs(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleSend = async () => {
+        setSending(true);
+        try {
+            await onSend(draftArgs);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    return (
+        <div className="bg-brand-surface/70 border border-white/10 rounded-2xl p-4 space-y-3">
+            <div className="text-xs uppercase tracking-widest text-brand-grey font-bold">
+                Draft Ready · {toolCall?.function?.name}
+            </div>
+            {fields.map((field) => (
+                <div key={field}>
+                    <label className="block text-[10px] text-brand-grey uppercase tracking-wider mb-1.5 font-bold">
+                        {field.replace(/_/g, ' ')}
+                    </label>
+                    {field === 'body' || field === 'text' ? (
+                        <textarea
+                            value={draftArgs[field] ?? ''}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            rows={4}
+                            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all"
+                        />
+                    ) : (
+                        <input
+                            value={draftArgs[field] ?? ''}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all"
+                        />
+                    )}
+                </div>
+            ))}
+            <div className="flex items-center gap-2 pt-2">
+                <button
+                    onClick={handleSend}
+                    disabled={sending}
+                    className="ml-auto px-4 py-2 rounded-xl bg-brand-accent text-white text-xs font-medium hover:bg-brand-accent/80 transition-all disabled:opacity-50"
+                >
+                    {sending ? 'Sending...' : 'Send Now'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export const ChatArea: React.FC<ChatAreaProps> = ({ messages, isLoading, statusMessage, onSendDraft }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -47,6 +117,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ messages, isLoading, statusM
                 // We assume if tool_calls exist, the content (if any) is likely the raw JSON that initiated it, 
                 // or we prioritize showing the "Using tool..." UI.
                 const hasToolCalls = msg.tool_calls && msg.tool_calls.length > 0;
+                const draftToolCall = msg.tool_calls?.find(tc => DRAFT_TOOL_FIELDS[tc.function?.name]);
                 // If message has tool calls, we hide the content if it looks like JSON or if we just want to be clean.
                 // For now, let's auto-hide content if tool calls are present, as the "raw JSON" issue is the main complaint.
                 const showContent = !hasToolCalls && msg.role !== 'tool';
@@ -85,8 +156,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ messages, isLoading, statusM
                                 </div>
                             )}
 
+                            {draftToolCall && onSendDraft && (
+                                <DraftCard toolCall={draftToolCall} onSend={(args) => onSendDraft(draftToolCall, args)} />
+                            )}
+
                             {/* Tool Calls Status */}
-                            {hasToolCalls && (
+                            {hasToolCalls && !draftToolCall && (
                                 <div className="ml-0 bg-brand-surface rounded-lg p-3 border border-white/5 text-xs font-mono text-brand-grey space-y-2">
                                     {msg.tool_calls?.map((tool, tIdx) => (
                                         <div key={tIdx} className="flex items-center gap-2">

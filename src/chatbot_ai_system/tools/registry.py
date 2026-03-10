@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from .base import MCPTool
 from .implementations.python_sandbox import LocalPythonSandbox
 from .implementations.web_search import DuckDuckGoSearchTool
+from .system_tools import GetCurrentTimeTool
 
 try:
     from .mcp_client import MCPClient
@@ -47,6 +48,7 @@ class ToolRegistry:
         # Phase 6.5: Register Free Tools automatically
         self.register(DuckDuckGoSearchTool())
         self.register(LocalPythonSandbox())
+        self.register(GetCurrentTimeTool())
 
     def register(self, tool: MCPTool):
         """Register a new local tool."""

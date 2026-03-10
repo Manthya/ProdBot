@@ -30,6 +30,7 @@ from chatbot_ai_system.models.schemas import (
 from chatbot_ai_system.services.media_pipeline import MediaPipeline
 from chatbot_ai_system.services.stt_engine import STTEngine
 from chatbot_ai_system.services.tts_engine import TTSEngine
+from chatbot_ai_system.config.settings_manager import settings_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -284,7 +285,7 @@ async def voice_stream(websocket: WebSocket):
                                     content=transcription,
                                 ),
                             ],
-                            model=settings.ollama_model,
+                            model=await settings_manager.get_setting("ollama_model"),
                             temperature=0.7,
                             max_tokens=200,
                         )

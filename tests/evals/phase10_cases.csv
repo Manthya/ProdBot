@@ -1,0 +1,117 @@
+test_id,query,expected_phase,expected_tool_required,expected_domains,expected_tool_call_cap,router_override,stream_tool_calls,tool_behavior,expected_verification,verify_outcome,expected_status_contains,expected_tool_name,coverage_tags
+G-001,Hello,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-002,Hi there,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-003,How are you?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-004,Thanks,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-005,What is Python?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-006,Explain git in simple terms,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-007,What is 2+2?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-008,Tell me a joke,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-009,Summarize the idea of recursion,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-010,What is a database?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-011,How does HTTP work?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-012,What is JSON?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-013,Define machine learning,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-014,Explain REST APIs,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-015,What is unit testing?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-016,Why use version control?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-017,Give me a short poem,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-018,What is a monorepo?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-019,Explain TCP vs UDP,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-020,What is a cache?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-021,Explain Docker in one paragraph,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-022,What is concurrency?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-023,What is OAuth?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-024,What is load balancing?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-025,Explain hashing,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-026,Explain logging levels,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-027,What is latency?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-028,What is a CDN?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-029,Explain TLS,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+G-030,What is an ORM?,GENERAL,false,,0,,one,ok,false,,,,phase:general|domain:none
+T-031,What time is it right now?,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-032,Current time in Tokyo,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-033,UTC time please,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-034,Timestamp now please,MEDIUM,true,time,1,,one,ok,false,,,get_timestamp,phase:medium|domain:time|deterministic
+T-035,time now,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-036,what's the time,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-037,time in Paris,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-038,timezone for PST?,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-039,what time is it in New York,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-040,current time UTC,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+T-041,timestamp,MEDIUM,true,time,1,,one,ok,false,,,get_timestamp,phase:medium|domain:time|deterministic
+T-042,what time is it,MEDIUM,true,time,1,,one,ok,false,,,current_time,phase:medium|domain:time|deterministic
+GIT-043,git status,MEDIUM,true,git,1,,one,ok,false,,,git_status,phase:medium|domain:git
+GIT-044,Show me git log,MEDIUM,true,git,1,,one,ok,false,,,git_log,phase:medium|domain:git
+GIT-045,git branch,MEDIUM,true,git,1,,one,ok,false,,,git_branch,phase:medium|domain:git
+GIT-046,git diff,MEDIUM,true,git,1,,one,ok,false,,,git_diff,phase:medium|domain:git
+GIT-047,git checkout main,MEDIUM,true,git,1,,one,ok,false,,,git_checkout,phase:medium|domain:git
+GIT-048,show git status,MEDIUM,true,git,1,,one,ok,false,,,git_status,phase:medium|domain:git
+GIT-049,git commit history,MEDIUM,true,git,1,,one,ok,false,,,git_log,phase:medium|domain:git
+GIT-050,git status for this repo,MEDIUM,true,git,1,,one,ok,false,,,git_status,phase:medium|domain:git
+GIT-051,show git branches,MEDIUM,true,git,1,,one,ok,false,,,git_branch,phase:medium|domain:git
+GIT-052,git diff last commit,MEDIUM,true,git,1,,one,ok,false,,,git_diff,phase:medium|domain:git
+F-053,Open https://example.com,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-054,Fetch https://example.com,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-055,Browse https://example.com,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-056,Search the web for cats,MEDIUM,true,fetch,1,,one,ok,false,,,web_search,phase:medium|domain:fetch|network
+F-057,Look up the Eiffel Tower online,MEDIUM,true,fetch,1,,one,ok,false,,,web_search,phase:medium|domain:fetch|network
+F-058,Find online info about pandas,MEDIUM,true,fetch,1,,one,ok,false,,,web_search,phase:medium|domain:fetch|network
+F-059,Open https://example.com/page,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-060,Download https://example.com/file,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-061,Search the web for latest Python version,MEDIUM,true,fetch,1,,one,ok,false,,,web_search,phase:medium|domain:fetch|network
+F-062,fetch https://example.com/docs,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-063,Open https://example.com and summarize,MEDIUM,true,fetch,1,,one,ok,false,,,fetch_html,phase:medium|domain:fetch|network
+F-064,search the web for climate data,MEDIUM,true,fetch,1,,one,ok,false,,,web_search,phase:medium|domain:fetch|network
+FS-065,List files in this folder,MEDIUM,true,filesystem,1,,one,ok,false,,,directory_tree,phase:medium|domain:filesystem
+FS-066,Read ./README.md,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+FS-067,Open docs/phase10.0.md,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+FS-068,Show package.json,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+FS-069,List directory,MEDIUM,true,filesystem,1,,one,ok,false,,,directory_tree,phase:medium|domain:filesystem
+FS-070,Create file notes.txt with hello,MEDIUM,true,filesystem,1,,one,ok,true,pass,,write_file,phase:medium|domain:filesystem|side_effect
+FS-071,Write a note to notes.txt,MEDIUM,true,filesystem,1,,one,ok,true,pass,,write_file,phase:medium|domain:filesystem|side_effect
+FS-072,Delete file ./tmp.txt,MEDIUM,true,filesystem,1,,one,error,true,fail,,delete_file,phase:medium|domain:filesystem|side_effect
+FS-073,Remove ./tmp.txt,MEDIUM,true,filesystem,1,,one,error,true,fail,,delete_file,phase:medium|domain:filesystem|side_effect
+FS-074,Update ./README.md,MEDIUM,true,filesystem,1,,one,ok,true,pass,,write_file,phase:medium|domain:filesystem|side_effect
+FS-075,Read file /etc/hosts,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+FS-076,List files here,MEDIUM,true,filesystem,1,,one,ok,false,,,directory_tree,phase:medium|domain:filesystem
+FS-077,Show me the directory tree,MEDIUM,true,filesystem,1,,one,ok,false,,,directory_tree,phase:medium|domain:filesystem
+FS-078,Open ./pyproject.toml,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+FS-079,Read tests/evals/phase10_cases.csv,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+FS-080,Show contents of docs/phase10.0_testing.md,MEDIUM,true,filesystem,1,,one,ok,false,,,read_file,phase:medium|domain:filesystem
+SQL-081,select * from users,MEDIUM,true,sqlite,1,,one,ok,false,,,query,phase:medium|domain:sqlite
+SQL-082,create table test(id int),MEDIUM,true,sqlite,1,,one,ok,true,pass,,create_table,phase:medium|domain:sqlite|side_effect
+SQL-083,insert into users values(1),MEDIUM,true,sqlite,1,,one,ok,true,pass,,insert_record,phase:medium|domain:sqlite|side_effect
+SQL-084,update users set name='a',MEDIUM,true,sqlite,1,,one,ok,true,pass,,execute,phase:medium|domain:sqlite|side_effect
+SQL-085,delete from users where id=1,MEDIUM,true,sqlite,1,,one,ok,true,pass,,execute,phase:medium|domain:sqlite|side_effect
+SQL-086,drop table users,MEDIUM,true,sqlite,1,,one,error,true,fail,,drop_table,phase:medium|domain:sqlite|side_effect
+SQL-087,select count(*) from users,MEDIUM,true,sqlite,1,,one,ok,false,,,query,phase:medium|domain:sqlite
+SQL-088,create table items(id int),MEDIUM,true,sqlite,1,,one,ok,true,pass,,create_table,phase:medium|domain:sqlite|side_effect
+SQL-089,insert into items values(2),MEDIUM,true,sqlite,1,,one,ok,true,pass,,insert_record,phase:medium|domain:sqlite|side_effect
+SQL-090,select * from items,MEDIUM,true,sqlite,1,,one,ok,false,,,query,phase:medium|domain:sqlite
+SQL-091,update items set id=3,MEDIUM,true,sqlite,1,,one,ok,true,pass,,execute,phase:medium|domain:sqlite|side_effect
+SQL-092,delete from items,MEDIUM,true,sqlite,1,,one,ok,true,pass,,execute,phase:medium|domain:sqlite|side_effect
+C-093,Compare file A and file B,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-094,Read README and summarize,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-095,Find the bug in src and summarize,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-096,Open https://example.com and summarize,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-097,Search the web for pandas then summarize,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-098,Read docs/phase10.0.md and extract key changes,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-099,List files and then show git status,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-100,Fetch https://example.com then summarize,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-101,Read file X and compare to file Y,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-102,Search web for cats and list results,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-103,Read README.md and check for TODO,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-104,Open docs and summarize differences,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-105,Fetch URL and extract title,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-106,Search for API docs then summarize,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-107,List directory and then read README,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-108,Check git status and then show diff,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-109,Compare two files and explain changes,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-110,Search online then update local notes,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-111,Read error log and find root cause,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+C-112,Analyze code and suggest fixes,COMPLEX,true,filesystem,2,"{""phase"":""COMPLEX"",""tool_required"":true,""tool_domains"":[""filesystem""],""expected_tool_calls"":2,""confidence"":0.8,""need_clarification"":false}",one,ok,false,,,,phase:complex|multi_step
+E-113,Router malformed JSON test,MEDIUM,true,fetch,1,MALFORMED,one,ok,false,,,fetch_html,phase:medium|mock_only
+E-114,Router low confidence fallback,GENERAL,false,,0,LOWCONF,none,ok,false,,,,phase:general|mock_only
+E-115,Tool spam in medium,MEDIUM,true,filesystem,1,,multi,ok,false,,,read_file,phase:medium|mock_only
+E-116,Forced retry tool selection,MEDIUM,true,filesystem,1,,none,ok,false,,Rethinking,read_file,phase:medium|mock_only

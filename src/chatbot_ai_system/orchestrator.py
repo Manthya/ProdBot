@@ -11,12 +11,29 @@ Phase 5.5: Adds agentic orchestration for complex multi-step tasks.
 - COMPLEX queries → Plan + ReAct agentic loop
 """
 
+import asyncio
+import json
 import logging
+import re
+import time
+import inspect
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import UUID
+from dataclasses import dataclass, field
 
 from chatbot_ai_system.config import get_settings
+from chatbot_ai_system.prompts import (
+    build_router_prompt,
+    build_system_prompt,
+    build_verification_prompt,
+    build_reflection_prompt,
+    INTENT_CLASSIFIER_PROMPT,
+    ROUTER_STRICT_SYSTEM_PROMPT,
+    FORCED_TOOL_CALL_PROMPT,
+    SUMMARIZE_PROMPT_TEMPLATE,
+    CONSOLIDATE_SUMMARY_PROMPT_TEMPLATE,
+)
 from chatbot_ai_system.database.redis import redis_client
 from chatbot_ai_system.models.schemas import (
     ChatMessage,
@@ -33,9 +50,187 @@ from chatbot_ai_system.observability.metrics import (
 from chatbot_ai_system.providers.base import BaseLLMProvider
 from chatbot_ai_system.services.agentic_engine import AgenticEngine
 from chatbot_ai_system.services.embedding import EmbeddingService
+from chatbot_ai_system.services.tool_reliability import tool_reliability_store
+from chatbot_ai_system.services.reflection import ReflectionHandler
+from chatbot_ai_system.services.agents import get_agent_for_node, AgentConfig
+from chatbot_ai_system.personal.constants import get_hitl_tool_names
 from chatbot_ai_system.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
+
+# Fix 2.3: Fast-path bypass for trivially simple queries
+TRIVIAL_PATTERNS = re.compile(
+    r'^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|good|great|bye|'
+    r'what is your name|who are you|how are you)[!?.\s]*$',
+    re.IGNORECASE
+)
+
+# Router configuration
+ROUTER_MAX_TOKENS = 220
+ROUTER_STRICT_MAX_TOKENS = 160
+ROUTER_LOW_CONFIDENCE_THRESHOLD = 0.35
+
+# Deterministic pre-router (strict patterns only)
+TIME_STRICT_PATTERNS = [
+    re.compile(r"^\s*what(?:'s| is)? the time\b", re.IGNORECASE),
+    re.compile(r"^\s*what time is it\b", re.IGNORECASE),
+    re.compile(r"\bcurrent time\b", re.IGNORECASE),
+    re.compile(r"\btime now\b", re.IGNORECASE),
+    re.compile(r"\btime in\s+[a-z]", re.IGNORECASE),
+    re.compile(r"\butc time\b", re.IGNORECASE),
+    re.compile(r"\btimezone\b", re.IGNORECASE),
+    re.compile(r"\btimestamp\b", re.IGNORECASE),
+]
+
+GIT_STRICT_PATTERNS = [
+    re.compile(r"\bgit\s+(status|diff|log|branch|checkout|commit|rebase|merge)\b", re.IGNORECASE),
+    re.compile(r"^\s*git\s+", re.IGNORECASE),
+]
+
+FETCH_STRICT_PATTERNS = [
+    re.compile(r"\bhttps?://\S+\b", re.IGNORECASE),
+    re.compile(r"\b(fetch|browse|open)\s+https?://", re.IGNORECASE),
+    re.compile(r"\b(search the web|look up|find online)\b", re.IGNORECASE),
+]
+
+FILE_ACTION_VERBS = ("read", "open", "show", "list", "write", "create", "delete", "remove", "edit", "update")
+FILE_NOUNS = ("file", "files", "folder", "folders", "directory", "directories", "path", "paths")
+FILE_MARKERS = ("/", "./", "../", ".py", ".md", ".txt", ".json", ".yaml", ".yml", ".csv", ".toml", ".ini")
+
+HIGH_RISK_TOOL_PREFIXES = (
+    "delete",
+    "remove",
+    "write",
+    "send",
+    "post",
+    "execute",
+    "run",
+    "update",
+    "insert",
+    "drop",
+    "create",
+    "deploy",
+)
+
+MULTI_STEP_MARKERS = (
+    " and ",
+    " then ",
+    " after ",
+    " before ",
+    " compare ",
+    " analyze ",
+    " summarize ",
+    " investigate ",
+    " research ",
+)
+
+# Guardrail: Prevent multi-MB tool payloads from stalling synthesis or bloating DB rows.
+MAX_TOOL_RESULT_CHARS = 50_000
+SIMPLE_LISTING_PHASE6_MAX_TOKENS = 220
+SIMPLE_LISTING_SYNTHESIS_MAX_TOKENS = 260
+FORCED_TOOL_CALL_MAX_TOKENS = 180
+SIMPLE_LISTING_EXCLUDE_PATTERNS = [
+    ".git",
+    ".venv",
+    "node_modules",
+    ".next",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+]
+
+SIMULATION_MARKERS = (
+    "simulate",
+    "simulated",
+    "assuming",
+    "assume",
+    "if tool",
+    "no tool provided",
+    "no direct tool",
+    "i don't have the capability",
+    "i do not have the capability",
+    "i can't access",
+    "i cannot access",
+)
+
+
+# ---------------------------------------------------------------------------
+# Graph State — shared context across all nodes
+# ---------------------------------------------------------------------------
+@dataclass
+class AgentState:
+    """Shared mutable state passed through graph nodes."""
+    # Core context
+    messages: List[ChatMessage]
+    user_input: str
+    model: str
+    temperature: float
+    max_tokens: int
+    conv_uuid: Any
+    current_seq: int
+    start_time: float
+
+    # Router output
+    router_decision: Dict[str, Any] = field(default_factory=dict)
+    phase: str = "GENERAL"
+    intent: str = "GENERAL"
+    tools: List[Dict[str, Any]] = field(default_factory=list)
+    tool_required: bool = False
+    requires_tool_execution: bool = False
+    simple_listing_mode: bool = False
+    expected_tool_calls: int = 0
+    router_confidence: Optional[float] = None
+
+    # Execution state
+    current_tool_calls: List[Any] = field(default_factory=list)
+    full_content: str = ""
+    raw_content: str = ""
+    tool_errors: List[str] = field(default_factory=list)
+    successful_tool_names: List[str] = field(default_factory=list)
+    reflection_count: int = 0
+
+    # Agent handoff tracking
+    active_agent: Optional[str] = None
+    handoff_history: List[str] = field(default_factory=list)
+
+    # Checkpoint
+    checkpoint_id: Optional[str] = None
+
+    # Persistence context
+    conv_summary: Optional[str] = None
+    last_summarized_seq: int = 0
+    last_usage: Any = None
+
+    def to_checkpoint(self, current_node: str, step: int) -> dict:
+        """Serialize resumable subset of state for Redis persistence."""
+        return {
+            "checkpoint_id": self.checkpoint_id,
+            "conv_uuid": str(self.conv_uuid),
+            "current_node": current_node,
+            "step": step,
+            "current_seq": self.current_seq,
+            "phase": self.phase,
+            "intent": self.intent,
+            "active_agent": self.active_agent,
+            "reflection_count": self.reflection_count,
+            "full_content": self.full_content[:500],  # Truncate for size
+            "tool_errors": self.tool_errors,
+            "successful_tool_names": self.successful_tool_names,
+            "handoff_history": self.handoff_history,
+            "status": "running",
+        }
+
+
+# Graph node names
+NODE_PLANNER = "planner"
+NODE_TOOL_EXECUTOR = "tool_executor"
+NODE_REFLECTION = "reflection"
+NODE_SYNTHESIS = "synthesis"
+NODE_END = "END"
+
+MAX_REFLECTION_RETRIES = 3
+CHECKPOINT_TTL_SECONDS = 3600  # 1 hour
 
 
 class ChatOrchestrator:
@@ -59,6 +254,622 @@ class ChatOrchestrator:
         # Always use Ollama for embeddings (Hybrid Architecture)
         self.embedding_service = EmbeddingService(base_url=self.settings.ollama_base_url)
         self.agentic_engine = AgenticEngine(provider=provider, registry=registry)
+        self.reflection_handler = ReflectionHandler(provider=provider)
+        # Fix 1.1: Cancellation signal for stream abort safety
+        self._cancelled = asyncio.Event()
+
+    def cancel(self):
+        """Signal cancellation — called when client disconnects mid-stream."""
+        self._cancelled.set()
+
+    def _is_cancelled(self) -> bool:
+        return self._cancelled.is_set()
+
+    # Fix 1.2: Token-aware context windowing
+    def _estimate_tokens(self, text: str) -> int:
+        """Rough token estimate: ~4 chars per token for English."""
+        if not text:
+            return 0
+        return len(text) // 4
+
+    def _pre_router_deterministic(self, user_input: str) -> Optional[Dict[str, Any]]:
+        """Deterministic router with strict patterns to avoid false positives."""
+        text = user_input.strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if any(marker in lowered for marker in MULTI_STEP_MARKERS):
+            return None
+
+        for pattern in TIME_STRICT_PATTERNS:
+            if pattern.search(lowered):
+                return {
+                    "phase": "MEDIUM",
+                    "tool_required": True,
+                    "tool_domains": ["time"],
+                    "expected_tool_calls": 1,
+                    "confidence": 0.95,
+                    "need_clarification": False,
+                    "source": "deterministic_time",
+                }
+
+        for pattern in GIT_STRICT_PATTERNS:
+            if pattern.search(lowered):
+                return {
+                    "phase": "MEDIUM",
+                    "tool_required": True,
+                    "tool_domains": ["git"],
+                    "expected_tool_calls": 1,
+                    "confidence": 0.92,
+                    "need_clarification": False,
+                    "source": "deterministic_git",
+                }
+
+        for pattern in FETCH_STRICT_PATTERNS:
+            if pattern.search(lowered):
+                return {
+                    "phase": "MEDIUM",
+                    "tool_required": True,
+                    "tool_domains": ["fetch"],
+                    "expected_tool_calls": 1,
+                    "confidence": 0.9,
+                    "need_clarification": False,
+                    "source": "deterministic_fetch",
+                }
+
+        if any(v in lowered for v in FILE_ACTION_VERBS) and (
+            any(n in lowered for n in FILE_NOUNS) or any(m in lowered for m in FILE_MARKERS)
+        ) and not any(p.search(lowered) for p in FETCH_STRICT_PATTERNS):
+            return {
+                "phase": "MEDIUM",
+                "tool_required": True,
+                "tool_domains": ["filesystem"],
+                "expected_tool_calls": 1,
+                "confidence": 0.9,
+                "need_clarification": False,
+                "source": "deterministic_filesystem",
+            }
+
+        if "sqlite" in lowered or (
+            any(k in lowered for k in ("select ", "insert ", "update ", "delete ", "create table"))
+            and "table" in lowered
+        ):
+            return {
+                "phase": "MEDIUM",
+                "tool_required": True,
+                "tool_domains": ["sqlite"],
+                "expected_tool_calls": 1,
+                "confidence": 0.85,
+                "need_clarification": False,
+                "source": "deterministic_sqlite",
+            }
+
+        return None
+
+    def _build_router_prompt(self, user_input: str, tool_domains: List[str]) -> List[ChatMessage]:
+        domain_list = ", ".join(tool_domains) if tool_domains else "none"
+        prompt = build_router_prompt(domain_list)
+        return [
+            ChatMessage(role=MessageRole.SYSTEM, content=prompt),
+            ChatMessage(role=MessageRole.USER, content=user_input),
+        ]
+
+    def _parse_router_response(self, text: str) -> Optional[Dict[str, Any]]:
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+
+        match = re.search(r"\\{.*\\}", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except Exception:
+                pass
+
+        # Fallback: parse line-by-line "key: value"
+        parsed: Dict[str, Any] = {}
+        for line in text.splitlines():
+            if ":" not in line:
+                continue
+            key, val = line.split(":", 1)
+            key = key.strip().lower()
+            val = val.strip()
+            if not key:
+                continue
+            parsed[key] = val
+        return parsed or None
+
+    def _normalize_router_decision(
+        self, raw: Optional[Dict[str, Any]], available_domains: List[str]
+    ) -> Dict[str, Any]:
+        raw = raw or {}
+        phase = str(raw.get("phase", "GENERAL")).upper()
+        if phase not in ("GENERAL", "MEDIUM", "COMPLEX"):
+            phase = "GENERAL"
+
+        tool_required = raw.get("tool_required", False)
+        if isinstance(tool_required, str):
+            tool_required = tool_required.strip().lower() in ("true", "yes", "1")
+        tool_required = bool(tool_required)
+
+        tool_domains = raw.get("tool_domains", [])
+        if isinstance(tool_domains, str):
+            tool_domains = [d.strip() for d in tool_domains.split(",") if d.strip()]
+        tool_domains = [d.lower() for d in tool_domains if isinstance(d, str)]
+        tool_domains = [d for d in tool_domains if d in available_domains]
+
+        expected_tool_calls = raw.get("expected_tool_calls", 0)
+        try:
+            expected_tool_calls = int(expected_tool_calls)
+        except Exception:
+            expected_tool_calls = 0
+        expected_tool_calls = 0 if expected_tool_calls <= 0 else 1 if expected_tool_calls == 1 else 2
+
+        confidence = raw.get("confidence", None)
+        try:
+            confidence = float(confidence) if confidence is not None else None
+        except Exception:
+            confidence = None
+
+        need_clarification = raw.get("need_clarification", False)
+        if isinstance(need_clarification, str):
+            need_clarification = need_clarification.strip().lower() in ("true", "yes", "1")
+        need_clarification = bool(need_clarification)
+
+        if not tool_required:
+            tool_domains = []
+
+        return {
+            "phase": phase,
+            "tool_required": tool_required,
+            "tool_domains": tool_domains,
+            "expected_tool_calls": expected_tool_calls,
+            "confidence": confidence,
+            "need_clarification": need_clarification,
+        }
+
+    def _rule_confidence(self, user_input: str, tool_domains: List[str]) -> float:
+        text = user_input.lower()
+        score = 0.4
+
+        if any(word in text for word in ("current", "now", "list", "show", "status", "fetch", "search", "read", "write")):
+            score += 0.2
+
+        if "?" in text:
+            score += 0.05
+
+        domain_keywords = {
+            "filesystem": ("file", "folder", "directory", "path"),
+            "git": ("git", "commit", "branch", "diff", "status"),
+            "fetch": ("http", "https", "url", "web", "search"),
+            "time": ("time", "timezone", "utc", "timestamp"),
+            "sqlite": ("sql", "sqlite", "table", "select", "insert", "update", "delete"),
+            "memory": ("remember", "recall", "memory"),
+        }
+
+        for domain in tool_domains:
+            keywords = domain_keywords.get(domain, ())
+            if keywords and any(k in text for k in keywords):
+                score += 0.1
+
+        score = max(0.1, min(0.95, score))
+        return score
+
+    async def _route_request(
+        self, user_input: str, model: str, has_media: bool
+    ) -> Dict[str, Any]:
+        """Route request to phase and tool domains with fallbacks for local models."""
+        if has_media:
+            return {
+                "phase": "MEDIUM",
+                "tool_required": False,
+                "tool_domains": [],
+                "expected_tool_calls": 0,
+                "confidence": 0.8,
+                "need_clarification": False,
+                "source": "media",
+            }
+
+        deterministic = self._pre_router_deterministic(user_input)
+        if deterministic:
+            return deterministic
+
+        available_domains = [c.lower() for c in self.registry.get_categories()]
+        if "general" not in available_domains:
+            available_domains.append("general")
+
+        router_messages = self._build_router_prompt(user_input, available_domains)
+        raw_decision = None
+
+        try:
+            response = await self.provider.complete(
+                messages=router_messages,
+                model=model,
+                max_tokens=ROUTER_MAX_TOKENS,
+                temperature=0.1,
+            )
+            raw_decision = self._parse_router_response(response.message.content or "")
+        except Exception as e:
+            logger.warning(f"Router primary parse failed: {e}")
+
+        if not raw_decision:
+            try:
+                strict_messages = [
+                    ChatMessage(
+                        role=MessageRole.SYSTEM,
+                        content=ROUTER_STRICT_SYSTEM_PROMPT,
+                    ),
+                    router_messages[-1],
+                ]
+                response = await self.provider.complete(
+                    messages=strict_messages,
+                    model=model,
+                    max_tokens=ROUTER_STRICT_MAX_TOKENS,
+                    temperature=0.0,
+                )
+                raw_decision = self._parse_router_response(response.message.content or "")
+            except Exception as e:
+                logger.warning(f"Router strict retry failed: {e}")
+
+        decision = self._normalize_router_decision(raw_decision, available_domains)
+        rule_conf = self._rule_confidence(user_input, decision["tool_domains"])
+        llm_conf = decision.get("confidence")
+        if llm_conf is None:
+            final_conf = rule_conf
+        else:
+            final_conf = (0.6 * rule_conf) + (0.4 * max(0.0, min(1.0, llm_conf)))
+
+        decision["confidence"] = max(0.0, min(1.0, final_conf))
+        decision["source"] = "router"
+
+        if decision["confidence"] < ROUTER_LOW_CONFIDENCE_THRESHOLD:
+            return {
+                "phase": "GENERAL",
+                "tool_required": False,
+                "tool_domains": [],
+                "expected_tool_calls": 0,
+                "confidence": decision["confidence"],
+                "need_clarification": True,
+                "source": "low_confidence_fallback",
+            }
+
+        return decision
+
+    async def _filter_tools_for_domains(
+        self, tool_domains: List[str], user_input: str, phase: str
+    ) -> List[Dict[str, Any]]:
+        """Select tools for multiple domains, then rank by reliability."""
+        if not tool_domains:
+            return []
+
+        tools: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+
+        def add_tool(tool: Dict[str, Any]) -> None:
+            name = tool["function"]["name"]
+            if name not in seen:
+                tools.append(tool)
+                seen.add(name)
+
+        for domain in tool_domains:
+            cat = domain.upper()
+            if cat == "GENERAL":
+                domain_tools = self.registry.get_tools_by_category("GENERAL")
+            else:
+                domain_tools = self.registry.get_tools_by_category(cat)
+            for tool in domain_tools:
+                add_tool(tool)
+
+        query_tools = await self.registry.get_ollama_tools(query=user_input)
+        local_tools = [t.to_ollama_format() for t in self.registry._tools.values()]
+        for tool in query_tools + local_tools:
+            add_tool(tool)
+
+        cap = 8 if phase == "MEDIUM" else 12
+        tools = tools[:cap]
+        tools = await tool_reliability_store.rank_tools(tools)
+        return tools
+
+    def _should_verify_tool_result(
+        self,
+        tool_name: str,
+        result_text: str,
+        had_error: bool,
+        router_confidence: Optional[float],
+    ) -> bool:
+        if had_error:
+            return True
+        if not result_text or not result_text.strip():
+            return True
+        if len(result_text) > 5000:
+            return True
+        if router_confidence is not None and router_confidence < 0.4:
+            return True
+        if len(result_text) > 5000:
+            return True
+        lowered = tool_name.lower()
+        if lowered in get_hitl_tool_names():
+            return True
+        return lowered.startswith(HIGH_RISK_TOOL_PREFIXES)
+
+    async def _verify_tool_result(
+        self,
+        user_input: str,
+        tool_name: str,
+        tool_args: Dict[str, Any],
+        result_text: str,
+        model: str,
+    ) -> tuple[bool, str]:
+        """Lightweight verification step for high-risk/failed tool results."""
+        excerpt = result_text
+        if len(excerpt) > 2000:
+            excerpt = excerpt[:2000] + "...[truncated]"
+
+        prompt = build_verification_prompt(
+            user_input=user_input,
+            tool_name=tool_name,
+            tool_args=str(tool_args),
+            excerpt=excerpt,
+        )
+        try:
+            response = await self.provider.complete(
+                messages=[ChatMessage(role=MessageRole.USER, content=prompt)],
+                model=model,
+                max_tokens=140,
+                temperature=0.0,
+            )
+            parsed = self._parse_router_response(response.message.content or "")
+            if isinstance(parsed, dict):
+                ok_val = parsed.get("ok", True)
+                reason = parsed.get("reason", "")
+                if isinstance(ok_val, str):
+                    ok_val = ok_val.strip().lower() in ("true", "yes", "1")
+                return bool(ok_val), str(reason)
+        except Exception as e:
+            logger.warning(f"Verification step failed: {e}")
+
+        # If verification fails to parse, assume ok unless result is empty.
+        if not result_text or not result_text.strip():
+            return False, "Tool returned empty output."
+        return True, "Verification unavailable."
+
+    def _build_clarification_response(
+        self, reason: str, tools: List[Dict[str, Any]], tool_errors: Optional[List[str]] = None
+    ) -> str:
+        available = ", ".join(t["function"]["name"] for t in tools[:6]) if tools else "none"
+        details = ""
+        if tool_errors:
+            details = f" Tool issues: {', '.join(tool_errors[:3])}."
+        return (
+            "I couldn't verify the tool result well enough to answer safely. "
+            f"Reason: {reason}.{details} Available tools: {available}. "
+            "Could you clarify or provide more specifics?"
+        )
+
+    def _serialize_tool_result(self, result: Any) -> str:
+        """Serialize tool output to a deterministic string for chat feedback."""
+        if isinstance(result, str):
+            return result
+        try:
+            return json.dumps(result, ensure_ascii=False, default=str)
+        except Exception:
+            return str(result)
+
+    def _prepare_tool_result(self, tool_name: str, result: Any) -> tuple[str, Dict[str, Any]]:
+        """Cap oversized tool output before adding it to model context/persistence."""
+        text = self._serialize_tool_result(result)
+        original_chars = len(text)
+        metadata: Dict[str, Any] = {
+            "tool_name": tool_name,
+            "result_chars": original_chars,
+            "truncated": False,
+        }
+
+        if original_chars <= MAX_TOOL_RESULT_CHARS:
+            return text, metadata
+
+        head_chars = MAX_TOOL_RESULT_CHARS // 2
+        tail_chars = MAX_TOOL_RESULT_CHARS - head_chars
+        removed_chars = original_chars - (head_chars + tail_chars)
+        truncated_text = (
+            f"{text[:head_chars]}\n\n"
+            f"[TRUNCATED {removed_chars} chars from tool output '{tool_name}']\n\n"
+            f"{text[-tail_chars:]}"
+        )
+        metadata.update(
+            {
+                "truncated": True,
+                "max_chars": MAX_TOOL_RESULT_CHARS,
+                "removed_chars": removed_chars,
+            }
+        )
+        logger.warning(
+            "Truncated tool output for %s from %s to %s chars",
+            tool_name,
+            original_chars,
+            len(truncated_text),
+        )
+        return truncated_text, metadata
+
+    def _is_simple_directory_listing_request(self, user_input: str) -> bool:
+        """Detect simple 'list files here' requests where we should enforce lightweight args."""
+        text = user_input.strip().lower()
+        if not text:
+            return False
+        intent_markers = ("list", "show", "display")
+        target_markers = ("file", "files", "folder", "folders", "directory", "directories")
+        location_markers = ("current", "here", "this directory", "working directory", "cwd")
+        return (
+            any(m in text for m in intent_markers)
+            and any(m in text for m in target_markers)
+            and any(m in text for m in location_markers)
+        )
+
+    def _restrict_tools_for_simple_listing(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Keep only directory listing tool to avoid unnecessary tool-expansion latency."""
+        directory_tools = [t for t in tools if t.get("function", {}).get("name") == "directory_tree"]
+        return directory_tools if directory_tools else tools
+
+    def _optimize_directory_tree_args(self, tool_args: Dict[str, Any]) -> Dict[str, Any]:
+        """Constrain directory_tree calls for speed and bounded output size."""
+        optimized = dict(tool_args or {})
+        optimized["path"] = optimized.get("path") or "."
+
+        existing = optimized.get("excludePatterns")
+        excludes = existing if isinstance(existing, list) else []
+        for pattern in SIMPLE_LISTING_EXCLUDE_PATTERNS:
+            if pattern not in excludes:
+                excludes.append(pattern)
+        optimized["excludePatterns"] = excludes
+
+        # Apply depth cap only if the schema already exposes a depth-like field.
+        for depth_key in ("maxDepth", "depth", "max_depth"):
+            if depth_key in optimized:
+                try:
+                    optimized[depth_key] = min(int(optimized[depth_key]), 2)
+                except Exception:
+                    optimized[depth_key] = 2
+        return optimized
+
+    def _infer_intent_override(self, user_input: str, available_categories: set[str]) -> Optional[str]:
+        """Heuristic override when classifier under-routes obvious tool intents."""
+        text = user_input.strip().lower()
+        if not text:
+            return None
+
+        rules: List[tuple[str, tuple[str, ...]]] = [
+            ("SQLITE", ("sqlite", "sql ", "table ", "insert ", "select ", "update ", "delete ")),
+            ("MEMORY", ("remember", "recall", "saved", "my release region", "my favorite")),
+            ("FILESYSTEM", ("file", "files", "directory", "folder", "readme", "path", "write")),
+            ("GIT", ("git ", "branch", "commit", "diff", "status", "rebase")),
+            ("FETCH", ("http://", "https://", "fetch ", "web ", "url", "website")),
+            ("TIME", ("current utc", "current time", "what time", "timezone", "utc", "timestamp")),
+        ]
+        for category, markers in rules:
+            if category in available_categories and any(m in text for m in markers):
+                return category
+        return None
+
+    def _requires_tool_execution(
+        self,
+        tool_required: bool,
+        user_input: str,
+        tools: List[Dict[str, Any]],
+        intent: str = "GENERAL",
+    ) -> bool:
+        """Determine when we should fail-closed if no tool execution occurs."""
+        if tool_required:
+            return True
+
+        if intent == "GENERAL":
+            return False
+
+        text = user_input.strip().lower()
+        if not text:
+            return False
+
+        conceptual_prefixes = (
+            "what is",
+            "explain",
+            "difference between",
+            "how does",
+            "how do",
+        )
+        runtime_markers = (
+            "current",
+            "now",
+            "list",
+            "show",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "fetch",
+            "status",
+            "remember",
+            "recall",
+            "table",
+            "query",
+            "insert",
+            "update",
+            "select",
+            "http://",
+            "https://",
+        )
+
+        if text.startswith(conceptual_prefixes) and not any(m in text for m in runtime_markers):
+            return False
+
+        # If intent is tool-backed and request asks for runtime state/actions, enforce fail-closed.
+        if any(m in text for m in runtime_markers):
+            return True
+
+        # Conservative default for non-GENERAL intents: require tools when available.
+        return bool(tools)
+
+    def _response_contains_simulation(self, content: str) -> bool:
+        text = (content or "").strip().lower()
+        return any(marker in text for marker in SIMULATION_MARKERS)
+
+    def _build_fail_closed_response(
+        self,
+        intent: str,
+        reason: str,
+        tools: List[Dict[str, Any]],
+        tool_errors: Optional[List[str]] = None,
+    ) -> str:
+        available = ", ".join(t["function"]["name"] for t in tools[:6]) if tools else "none"
+        details = ""
+        if tool_errors:
+            details = f" Tool errors: {', '.join(tool_errors[:3])}."
+        return (
+            f"I can't verify this request reliably via tools yet, so I won't simulate a result. "
+            f"Intent={intent}. Reason: {reason}. Available tools: {available}.{details}"
+        )
+
+    async def _build_context_window(
+        self, messages: List[ChatMessage], conv_uuid, max_context_tokens: int = 24000
+    ) -> List[ChatMessage]:
+        """Assemble context window respecting token budget instead of flat message count."""
+        # Reserve tokens: system prompt (~500), response (~2000)
+        available = max_context_tokens - 2500
+
+        result = []
+
+        # Always keep system message
+        if messages and messages[0].role == MessageRole.SYSTEM:
+            system_tokens = self._estimate_tokens(messages[0].content)
+            available -= system_tokens
+            result.append(messages[0])
+            messages = messages[1:]
+
+        # Walk backwards from most recent, filling budget
+        kept = []
+        for msg in reversed(messages):
+            msg_tokens = self._estimate_tokens(msg.content)
+            if available - msg_tokens < 0:
+                break
+            kept.append(msg)
+            available -= msg_tokens
+
+        kept.reverse()
+
+        # If we dropped messages, inject summary as bridge
+        if len(kept) < len(messages):
+            try:
+                summary_data = await self.conversation_repo.get_conversation_summary(conv_uuid)
+                if summary_data and summary_data.get("summary"):
+                    bridge = ChatMessage(
+                        role=MessageRole.SYSTEM,
+                        content=f"[Earlier context summary]: {summary_data['summary']}"
+                    )
+                    result.append(bridge)
+            except Exception as e:
+                logger.warning(f"Could not inject summary bridge: {e}")
+
+        result.extend(kept)
+        return result
 
     async def run(
         self,
@@ -153,21 +964,61 @@ class ChatOrchestrator:
             # We'll cache it after we've computed all parts
             pass
 
-        # --- Phase 4+5.5: Intent + Complexity Classification ---
-        intent, complexity = await self.agentic_engine.classify_intent_and_complexity(
-            user_input, model, has_media=(has_images or has_audio_transcription)
-        )
-        logger.info(f"Phase 4: intent='{intent}', complexity='{complexity}'")
-        INTENT_CLASSIFICATION_TOTAL.labels(intent=intent).inc()
-
-        # --- Phase 5: Tool Scope Reduction ---
-        if complexity == "COMPLEX":
-            tools = await self.agentic_engine.get_expanded_tools(intent, user_input)
+        # --- Fix 2.3: Fast-path bypass for trivial queries ---
+        if TRIVIAL_PATTERNS.match(user_input.strip()):
+            router_decision = {
+                "phase": "GENERAL",
+                "tool_required": False,
+                "tool_domains": [],
+                "expected_tool_calls": 0,
+                "confidence": 1.0,
+                "need_clarification": False,
+                "source": "trivial",
+            }
+            tools = []
+            logger.info(f"Fast-path: trivial query bypass for '{user_input[:50]}'")
         else:
-            tools = await self._filter_tools(intent, user_input)
-        logger.info(
-            f"Phase 5: Selected {len(tools)} tools: {[t['function']['name'] for t in tools]}"
+            router_decision = await self._route_request(
+                user_input, model, has_media=(has_images or has_audio_transcription)
+            )
+            tool_domains = router_decision.get("tool_domains", [])
+            phase = router_decision.get("phase", "GENERAL")
+            tools = await self._filter_tools_for_domains(tool_domains, user_input, phase)
+            logger.info(
+                "Router decision: phase=%s tool_required=%s domains=%s confidence=%.2f",
+                phase,
+                router_decision.get("tool_required"),
+                tool_domains,
+                router_decision.get("confidence", 0.0) or 0.0,
+            )
+            logger.info(
+                f"Phase 5: Selected {len(tools)} tools: {[t['function']['name'] for t in tools]}"
+            )
+
+        phase = router_decision.get("phase", "GENERAL")
+        tool_required = router_decision.get("tool_required", False)
+        tool_domains = router_decision.get("tool_domains", [])
+        router_confidence = router_decision.get("confidence")
+        expected_tool_calls = int(router_decision.get("expected_tool_calls") or 0)
+        intent = tool_domains[0].upper() if tool_domains else "GENERAL"
+
+        simple_listing_mode = (
+            phase in ("GENERAL", "MEDIUM")
+            and intent == "FILESYSTEM"
+            and self._is_simple_directory_listing_request(user_input)
         )
+        if simple_listing_mode and tools:
+            tools = self._restrict_tools_for_simple_listing(tools)
+            logger.info(
+                "Phase 5 opt: simple directory listing mode enabled; restricted tools to %s",
+                [t["function"]["name"] for t in tools],
+            )
+        requires_tool_execution = self._requires_tool_execution(
+            tool_required, user_input, tools, intent=intent
+        )
+        if requires_tool_execution:
+            logger.info("Phase 5 guard: tool execution required for this request.")
+        INTENT_CLASSIFICATION_TOTAL.labels(intent=intent).inc()
 
         # --- Phase 5.5: Semantic Memory Retrieval ---
         if not semantic_context:
@@ -183,7 +1034,12 @@ class ChatOrchestrator:
                             semantic_context += f"- {m.role}: {m.content}\n"
                         logger.info(f"Phase 5.5: Retrieved {len(similar_msgs)} similar messages.")
             except Exception as e:
-                logger.error(f"Semantic memory retrieval failed: {e}")
+                logger.error(f"Semantic memory retrieval failed: {e}. Rolling back session to recover.")
+                # If the SQL fails (e.g. pgvector missing), we MUST rollback to continue using the session
+                try:
+                    await self.conversation_repo.session.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Second-level rollback failed: {rb_err}")
 
         # Update Context Cache
         await redis_client.set(
@@ -197,11 +1053,12 @@ class ChatOrchestrator:
         )
 
         # Prepare messages
-        messages = list(conversation_history)
+        # Fix 1.2: Token-aware context windowing
+        messages = await self._build_context_window(list(conversation_history), conv_uuid)
         current_seq = len(conversation_history)
 
         # Inject Dynamic System Prompt
-        system_prompt = self._get_system_prompt(intent, bool(tools))
+        system_prompt = self._get_system_prompt(phase, bool(tools))
         if user_context:
             system_prompt += user_context
         if semantic_context:
@@ -214,116 +1071,384 @@ class ChatOrchestrator:
         else:
             messages.insert(0, ChatMessage(role=MessageRole.SYSTEM, content=system_prompt))
 
-        # --- Phase 5.5: Route COMPLEX to Agentic Engine ---
-        if complexity == "COMPLEX" and tools:
-            logger.info("Phase 5.5: Routing to agentic Plan+ReAct engine")
-            self.last_usage = None  # Initialize usage tracking
-
-            # Build conversation context for planner
-            conv_context = ""
-            if conv_summary:
-                conv_context = f"Previous context: {conv_summary}"
-
-            # Create plan
-            tool_names = [t["function"]["name"] for t in tools]
-            plan = await self.agentic_engine.create_plan(
-                user_input, model, tool_names, conv_context
-            )
-
-            # Execute plan with ReAct loop
-            agentic_content = ""
-            agentic_tool_calls = []
-
-            async for chunk in self.agentic_engine.execute(
-                messages=messages,
-                model=model,
+        if requires_tool_execution and not tools:
+            fail_content = self._build_clarification_response(
+                reason="No matching tools were selected for this request",
                 tools=tools,
-                plan=plan,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            ):
-                agentic_content += chunk.content
-                if chunk.usage:
-                    self.last_usage = chunk.usage
-                yield chunk
-
-            # Persist final agentic response
+            )
             current_seq += 1
             msg = await self.conversation_repo.add_message(
                 conversation_id=conv_uuid,
                 role=MessageRole.ASSISTANT,
-                content=agentic_content,
+                content=fail_content,
                 sequence_number=current_seq,
-                metadata={"model": model, "type": "agentic", "plan": plan},
-                token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
-                token_count_completion=self.last_usage.completion_tokens
-                if self.last_usage
-                else None,
+                metadata={"model": model, "type": "fail_closed"},
                 model=model,
             )
-            import asyncio
-
-            asyncio.create_task(self._embed_message(msg.id, agentic_content))
-            asyncio.create_task(self._embed_user_message(conv_uuid, current_seq - 1))
-
-            # Summarization check
-            if (current_seq - last_summarized_seq) >= 20:
-                await self._summarize_conversation(
-                    conv_uuid, current_seq, last_summarized_seq, model
-                )
-
+            asyncio.create_task(self._safe_embed(msg.id, fail_content))
+            yield StreamChunk(content=fail_content, done=True)
             ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=intent).observe(
                 time.time() - start_time
             )
             return
 
-        # --- Phase 6: Fast Path (SIMPLE) — One-shot flow (unchanged) ---
-        current_tool_calls: List[ToolCall] = []
-        full_content = ""
-        self.last_usage = None  # Track usage from stream
-
-        # Streaming loop
-        async for chunk in self.provider.stream(
+        # --- Graph execution: delegate to _run_graph() ---
+        state = AgentState(
             messages=messages,
+            user_input=user_input,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            tools=tools if tools else None,
+            conv_uuid=conv_uuid,
+            current_seq=current_seq,
+            start_time=start_time,
+            router_decision=router_decision,
+            phase=phase,
+            intent=intent,
+            tools=tools,
+            tool_required=tool_required,
+            requires_tool_execution=requires_tool_execution,
+            simple_listing_mode=simple_listing_mode,
+            expected_tool_calls=expected_tool_calls,
+            router_confidence=router_confidence,
+            conv_summary=conv_summary,
+            last_summarized_seq=last_summarized_seq,
+        )
+
+        async for chunk in self._run_graph(state):
+            yield chunk
+
+    # ===================================================================
+    # Graph Runner — State-Machine Handoff Architecture (Phase 10)
+    # ===================================================================
+
+    async def _run_graph(
+        self, state: AgentState
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Graph runner: dispatches to node functions based on the current phase.
+        Performs agent handoff at each node and persists checkpoints to Redis.
+
+        Flow:
+            COMPLEX → _node_planner → _node_tool_executor → _node_reflection → _node_synthesis
+            MEDIUM  → _node_tool_executor → _node_reflection → _node_synthesis
+            GENERAL → _node_tool_executor → _node_synthesis
+        """
+        import uuid as _uuid
+        phase = state.phase
+
+        # Generate checkpoint ID for this graph execution
+        state.checkpoint_id = str(_uuid.uuid4())
+
+        # Determine starting node
+        if phase == "COMPLEX" and state.tools:
+            current_node = NODE_PLANNER
+        else:
+            current_node = NODE_TOOL_EXECUTOR
+
+        logger.info("Graph: starting at node=%s (phase=%s, checkpoint=%s)",
+                     current_node, phase, state.checkpoint_id[:8])
+
+        # Simple graph loop — nodes return the next node name
+        max_graph_steps = 10  # Circuit breaker
+        step = 0
+        while current_node != NODE_END and step < max_graph_steps:
+            step += 1
+            if self._is_cancelled():
+                logger.info("Graph: cancelled at node=%s", current_node)
+                return
+
+            # --- Agent Handoff: select the right agent for this node ---
+            agent_config = get_agent_for_node(current_node, phase)
+            state.active_agent = agent_config.name
+            state.handoff_history.append(agent_config.name)
+            logger.info(
+                "Graph: handoff to agent='%s' at node='%s' (step %d, temp=%.1f, max_tok=%d)",
+                agent_config.name, current_node, step,
+                agent_config.temperature, agent_config.max_tokens,
+            )
+
+            if current_node == NODE_PLANNER:
+                next_node = await self._node_planner(state)
+                current_node = next_node
+
+            elif current_node == NODE_TOOL_EXECUTOR:
+                next_node = NODE_SYNTHESIS  # default
+                async for chunk_or_next in self._node_tool_executor(state):
+                    if isinstance(chunk_or_next, str):
+                        next_node = chunk_or_next
+                    else:
+                        yield chunk_or_next
+                current_node = next_node
+
+            elif current_node == NODE_REFLECTION:
+                next_node = await self._node_reflection(state)
+                if next_node == NODE_TOOL_EXECUTOR:
+                    yield StreamChunk(
+                        content="", status="Rethinking tool selection...", done=False
+                    )
+                current_node = next_node
+
+            elif current_node == NODE_SYNTHESIS:
+                async for chunk in self._node_synthesis(state):
+                    yield chunk
+                current_node = NODE_END
+
+            else:
+                logger.error("Graph: unknown node '%s', breaking", current_node)
+                current_node = NODE_END
+
+            # --- Checkpoint: persist state after each node transition ---
+            await self._save_checkpoint(state, current_node, step)
+
+        if step >= max_graph_steps:
+            logger.error("Graph: circuit breaker hit at %d steps", max_graph_steps)
+
+        # --- Post-graph: Mark checkpoint complete + Summarization + Metrics ---
+        await self._clear_checkpoint(state.conv_uuid, state.checkpoint_id)
+
+        if (state.current_seq - state.last_summarized_seq) >= 20:
+            asyncio.create_task(self._safe_summarize(
+                state.conv_uuid, state.current_seq,
+                state.last_summarized_seq, state.model
+            ))
+
+        ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=state.intent).observe(
+            time.time() - state.start_time
+        )
+
+    # -------------------------------------------------------------------
+    # Checkpoint Persistence (Redis)
+    # -------------------------------------------------------------------
+    async def _save_checkpoint(
+        self, state: AgentState, current_node: str, step: int
+    ) -> None:
+        """Save a lightweight checkpoint to Redis after each node transition."""
+        try:
+            from chatbot_ai_system.database.redis import redis_client
+            key = f"checkpoint:{state.conv_uuid}:{state.checkpoint_id}"
+            data = state.to_checkpoint(current_node, step)
+            await redis_client.set(key, data, ttl=CHECKPOINT_TTL_SECONDS)
+            logger.debug("Checkpoint saved: %s (node=%s, step=%d)", key, current_node, step)
+        except Exception as e:
+            # Checkpointing is best-effort — never block the hot path
+            logger.warning("Checkpoint save failed: %s", e)
+
+    async def _load_checkpoint(self, conv_uuid: Any) -> Optional[dict]:
+        """Load the most recent incomplete checkpoint for a conversation."""
+        try:
+            from chatbot_ai_system.database.redis import redis_client
+            # Scan for checkpoint keys for this conversation
+            # Since we use a single checkpoint per execution, just try the pattern
+            if hasattr(redis_client, '_redis') and redis_client._redis:
+                keys = []
+                async for key in redis_client._redis.scan_iter(
+                    match=f"checkpoint:{conv_uuid}:*", count=10
+                ):
+                    keys.append(key)
+                if not keys:
+                    return None
+                # Get the most recent one
+                for key in keys:
+                    data = await redis_client.get(key)
+                    if data and isinstance(data, dict) and data.get("status") == "running":
+                        logger.info("Found incomplete checkpoint: %s", key)
+                        return data
+        except Exception as e:
+            logger.warning("Checkpoint load failed: %s", e)
+        return None
+
+    async def _clear_checkpoint(self, conv_uuid: Any, checkpoint_id: str) -> None:
+        """Remove a completed checkpoint from Redis."""
+        try:
+            from chatbot_ai_system.database.redis import redis_client
+            key = f"checkpoint:{conv_uuid}:{checkpoint_id}"
+            await redis_client.delete(key)
+            logger.debug("Checkpoint cleared: %s", key)
+        except Exception as e:
+            logger.warning("Checkpoint clear failed: %s", e)
+
+    # -------------------------------------------------------------------
+    # Node: Planner (wraps existing AgenticEngine)
+    # -------------------------------------------------------------------
+    async def _node_planner(self, state: AgentState) -> str:
+        """Plan + execute via the existing agentic engine for COMPLEX tasks."""
+        logger.info("Node[planner]: creating plan via AgenticEngine")
+        self.last_usage = None
+
+        conv_context = ""
+        if state.conv_summary:
+            conv_context = f"Previous context: {state.conv_summary}"
+
+        tool_names = [t["function"]["name"] for t in state.tools]
+        plan = await self.agentic_engine.create_plan(
+            state.user_input, state.model, tool_names, conv_context
+        )
+
+        # Execute plan with ReAct loop
+        agentic_content = ""
+        # We store chunks to yield them from _run_graph after this returns.
+        # But since _node_planner is called in the graph loop without yielding,
+        # we need to handle this differently — execute inline and persist.
+        async for chunk in self.agentic_engine.execute(
+            messages=state.messages,
+            model=state.model,
+            tools=state.tools,
+            plan=plan,
+            temperature=state.temperature,
+            max_tokens=state.max_tokens,
         ):
-            full_content += chunk.content
+            if self._is_cancelled():
+                logger.info("Node[planner]: cancelled during agentic execution")
+                return NODE_END
+            agentic_content += chunk.content
+            if chunk.usage:
+                self.last_usage = chunk.usage
+            state.full_content = agentic_content
+            state.last_usage = self.last_usage
+
+        # Persist final agentic response
+        state.current_seq += 1
+        msg = await self.conversation_repo.add_message(
+            conversation_id=state.conv_uuid,
+            role=MessageRole.ASSISTANT,
+            content=agentic_content,
+            sequence_number=state.current_seq,
+            metadata={"model": state.model, "type": "agentic", "plan": plan},
+            token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
+            token_count_completion=self.last_usage.completion_tokens
+            if self.last_usage
+            else None,
+            model=state.model,
+        )
+        asyncio.create_task(self._safe_embed(msg.id, agentic_content))
+        asyncio.create_task(self._safe_embed_user(state.conv_uuid, state.current_seq - 1))
+
+        return NODE_END  # Agentic engine handles its own synthesis
+
+    # -------------------------------------------------------------------
+    # Node: Tool Executor (wraps existing Phase 6 + 7 logic)
+    # -------------------------------------------------------------------
+    async def _node_tool_executor(self, state: AgentState):
+        """
+        Yields StreamChunk objects during execution.
+        The LAST yielded value is a string indicating the next node.
+        """
+        # --- Phase 6: LLM streaming to extract tool calls ---
+        current_tool_calls: List[ToolCall] = []
+        full_content = ""
+        raw_content = ""
+        self.last_usage = None
+        phase6_max_tokens = (
+            min(state.max_tokens, SIMPLE_LISTING_PHASE6_MAX_TOKENS)
+            if state.simple_listing_mode else state.max_tokens
+        )
+
+        async for chunk in self.provider.stream(
+            messages=state.messages,
+            model=state.model,
+            temperature=state.temperature,
+            max_tokens=phase6_max_tokens,
+            tools=state.tools if state.tools else None,
+        ):
+            if self._is_cancelled():
+                logger.info("Node[tool_executor]: cancelled during streaming")
+                return
+
+            raw_content += chunk.content
+            if not (state.requires_tool_execution and state.tools):
+                full_content += chunk.content
             if chunk.tool_calls:
                 logger.info(
-                    f"Phase 6: Detected {len(chunk.tool_calls)} tool calls from stream: {[tc.function.name for tc in chunk.tool_calls]}"
+                    "Phase 6: Detected %d tool calls from stream: %s",
+                    len(chunk.tool_calls),
+                    [tc.function.name for tc in chunk.tool_calls],
                 )
                 current_tool_calls.extend(chunk.tool_calls)
+                yield StreamChunk(content="", tool_calls=chunk.tool_calls, done=False)
 
-            if not current_tool_calls:
+            if not current_tool_calls and not (state.requires_tool_execution and state.tools):
                 yield chunk
-            else:
-                pass
 
-            # Capture usage from the last chunk if present
+            if (state.phase == "MEDIUM" or state.expected_tool_calls == 1) and len(current_tool_calls) > 1:
+                logger.warning(
+                    "Phase 6: Tool call cap enforced (phase=%s, expected=%s). Slicing to 1.",
+                    state.phase, state.expected_tool_calls,
+                )
+                current_tool_calls = current_tool_calls[:1]
+
             if chunk.usage:
                 self.last_usage = chunk.usage
 
-        # Check for fallback parsing (Phase 6b)
-        if not current_tool_calls and tools:
-            parsed = self.provider._try_parse_tool_calls(full_content)
+        # Phase 6b: fallback parsing
+        if not current_tool_calls and state.tools:
+            parsed = self.provider._try_parse_tool_calls(raw_content)
             if parsed:
-                logger.info(f"Phase 6b: Parsed {len(parsed)} tool calls from content fallback")
-                current_tool_calls = parsed
+                logger.info("Phase 6b: Parsed %d tool calls from content fallback", len(parsed))
+                if (state.phase == "MEDIUM" or state.expected_tool_calls == 1) and len(parsed) > 1:
+                    current_tool_calls = parsed[:1]
+                else:
+                    current_tool_calls = parsed
+                yield StreamChunk(content="", tool_calls=current_tool_calls, done=False)
 
-        # Safety fallback: if LLM returned empty content AND no tool calls were captured,
-        # retry without tools to get a natural language response
-        if not full_content.strip() and not current_tool_calls and tools:
+        # Phase 6d: forced retry
+        if state.requires_tool_execution and state.tools and not current_tool_calls:
+            logger.warning("Phase 6d: Required tool call missing — forcing strict retry")
+            yield StreamChunk(content="", status="Rethinking tool selection...", done=False)
+            try:
+                forced_messages = list(state.messages) + [
+                    ChatMessage(role=MessageRole.SYSTEM, content=FORCED_TOOL_CALL_PROMPT)
+                ]
+                forced = await self.provider.complete(
+                    messages=forced_messages,
+                    model=state.model,
+                    temperature=0.0,
+                    max_tokens=min(state.max_tokens, FORCED_TOOL_CALL_MAX_TOKENS),
+                    tools=state.tools,
+                )
+                forced_tool_calls = forced.message.tool_calls
+                if not forced_tool_calls and forced.message.content:
+                    forced_tool_calls = self.provider._try_parse_tool_calls(forced.message.content)
+                if forced_tool_calls:
+                    if (state.phase == "MEDIUM" or state.expected_tool_calls == 1) and len(forced_tool_calls) > 1:
+                        current_tool_calls = forced_tool_calls[:1]
+                    else:
+                        current_tool_calls = forced_tool_calls
+                    if forced.usage:
+                        self.last_usage = forced.usage
+                    yield StreamChunk(content="", tool_calls=current_tool_calls, done=False)
+                else:
+                    full_content = self._build_fail_closed_response(
+                        intent=state.intent,
+                        reason="Model did not return a valid tool call",
+                        tools=state.tools,
+                    )
+                    yield StreamChunk(content=full_content, done=True)
+                    state.full_content = full_content
+                    yield NODE_END
+                    return
+            except Exception as e:
+                logger.error("Forced tool-call retry failed: %s", e)
+                full_content = self._build_fail_closed_response(
+                    intent=state.intent,
+                    reason=f"Forced tool-call retry failed ({e})",
+                    tools=state.tools,
+                )
+                yield StreamChunk(content=full_content, done=True)
+                state.full_content = full_content
+                yield NODE_END
+                return
+
+        # Phase 6c: empty response fallback
+        if not full_content.strip() and not current_tool_calls and state.tools and not state.requires_tool_execution:
             logger.warning("Phase 6c: Empty response with tools — retrying without tools")
             full_content = ""
             self.last_usage = None
             async for chunk in self.provider.stream(
-                messages=messages,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
+                messages=state.messages,
+                model=state.model,
+                temperature=state.temperature,
+                max_tokens=phase6_max_tokens,
                 tools=None,
             ):
                 full_content += chunk.content
@@ -332,145 +1457,295 @@ class ChatOrchestrator:
                 yield chunk
 
         # --- Phase 7: Tool Execution ---
-        if current_tool_calls:
-            # Append assistant message with tool calls
-            assistant_msg = ChatMessage(
-                role=MessageRole.ASSISTANT, content=full_content, tool_calls=current_tool_calls
-            )
-            messages.append(assistant_msg)
+        state.full_content = full_content
+        state.raw_content = raw_content
+        state.current_tool_calls = current_tool_calls
+        state.last_usage = self.last_usage
 
-            # Persist to DB
-            current_seq += 1
-            msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
+        if not current_tool_calls:
+            # No tool calls — go straight to synthesis/persist
+            yield NODE_SYNTHESIS
+            return
+
+        # HITL check
+        hitl_tools = set(get_hitl_tool_names())
+        if any(tc.function.name in hitl_tools for tc in current_tool_calls):
+            assistant_msg = ChatMessage(
                 role=MessageRole.ASSISTANT,
                 content=full_content,
-                sequence_number=current_seq,
+                tool_calls=current_tool_calls,
+            )
+            state.messages.append(assistant_msg)
+
+            state.current_seq += 1
+            await self.conversation_repo.add_message(
+                conversation_id=state.conv_uuid,
+                role=MessageRole.ASSISTANT,
+                content=full_content,
+                sequence_number=state.current_seq,
                 tool_calls=[t.model_dump() for t in current_tool_calls],
-                metadata={"model": model},
+                metadata={"model": state.model, "requires_confirmation": True},
                 token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
                 token_count_completion=self.last_usage.completion_tokens
                 if self.last_usage
                 else None,
-                model=model,
+                model=state.model,
             )
 
-            # Background embedding (Phase 3) - Temporarily disabled to avoid session errors in tests
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, full_content))
+            yield StreamChunk(
+                content="",
+                status="Awaiting your confirmation...",
+                tool_calls=current_tool_calls,
+                done=False,
+            )
+            yield NODE_END
+            return
 
-            # Also embed the user message that started this turn
-            # asyncio.create_task(self._embed_user_message(conv_uuid, current_seq - 1))
+        # Persist assistant message with tool calls
+        assistant_msg = ChatMessage(
+            role=MessageRole.ASSISTANT, content=full_content, tool_calls=current_tool_calls
+        )
+        state.messages.append(assistant_msg)
 
-            # Execute tools
-            for tool_call in current_tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = tool_call.function.arguments
+        state.current_seq += 1
+        msg = await self.conversation_repo.add_message(
+            conversation_id=state.conv_uuid,
+            role=MessageRole.ASSISTANT,
+            content=full_content,
+            sequence_number=state.current_seq,
+            tool_calls=[t.model_dump() for t in current_tool_calls],
+            metadata={"model": state.model},
+            token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
+            token_count_completion=self.last_usage.completion_tokens
+            if self.last_usage
+            else None,
+            model=state.model,
+        )
 
-                yield StreamChunk(content="", status=f"Executing {tool_name}...", done=False)
+        asyncio.create_task(self._safe_embed(msg.id, full_content))
+        asyncio.create_task(self._safe_embed_user(state.conv_uuid, state.current_seq - 1))
 
+        # Execute each tool
+        successful_tool_names: List[str] = []
+        tool_errors: List[str] = []
+        for tool_call in current_tool_calls:
+            tool_name = tool_call.function.name
+            tool_args = tool_call.function.arguments
+            original_tool_args = dict(tool_args or {})
+            if state.simple_listing_mode and tool_name == "directory_tree":
+                tool_args = self._optimize_directory_tree_args(tool_args)
+
+            yield StreamChunk(content="", status=f"Executing {tool_name}...", done=False)
+
+            tool_metadata: Dict[str, Any] = {"tool_name": tool_name, "truncated": False}
+            tool_error: Optional[str] = None
+            result = ""
+            success = False
+            try:
+                tool_start = time.time()
+                tool = self.registry.get_tool(tool_name)
                 try:
-                    tool_start = time.time()
-                    tool = self.registry.get_tool(tool_name)
-                    result = await tool.run(**tool_args)
-                    TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
-                except Exception as e:
-                    logger.error(f"Tool execution failed: {e}")
-                    TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="error").inc()
-                    result = f"Error executing tool {tool_name}: {e}"
-                finally:
-                    TOOL_EXECUTION_DURATION_SECONDS.labels(tool_name=tool_name).observe(
-                        time.time() - tool_start
+                    raw_result = await tool.run(**tool_args)
+                except Exception:
+                    if state.simple_listing_mode and tool_name == "directory_tree" and tool_args != original_tool_args:
+                        logger.warning("directory_tree optimized args failed; retrying with original args")
+                        raw_result = await tool.run(**original_tool_args)
+                    else:
+                        raise
+                result, tool_metadata = self._prepare_tool_result(tool_name, raw_result)
+                success = True
+                TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
+            except Exception as e:
+                logger.error("Tool execution failed: %s", e)
+                TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="error").inc()
+                tool_error = str(e)
+                tool_errors.append(f"{tool_name}: {e}")
+                result = f"Error executing tool {tool_name}: {e}"
+
+                # --- Reflection: attempt self-correction on failure ---
+                if state.reflection_count < MAX_REFLECTION_RETRIES:
+                    should_retry, corrected = await self.reflection_handler.handle_error(
+                        tool_name=tool_name,
+                        tool_args=original_tool_args,
+                        error=str(e),
+                        model=state.model,
+                        attempt=state.reflection_count,
                     )
-
-                # Persist result
-                current_seq += 1
-                tool_msg = ChatMessage(
-                    role=MessageRole.TOOL, content=str(result), tool_call_id=tool_call.id
+                    if should_retry and corrected:
+                        state.reflection_count += 1
+                        corrected_args = corrected.get("arguments", {})
+                        logger.info(
+                            "Reflection: retrying '%s' with corrected args (attempt %d)",
+                            tool_name, state.reflection_count,
+                        )
+                        yield StreamChunk(
+                            content="",
+                            status=f"Retrying {tool_name} with corrected arguments...",
+                            done=False,
+                        )
+                        try:
+                            raw_result = await tool.run(**corrected_args)
+                            result, tool_metadata = self._prepare_tool_result(tool_name, raw_result)
+                            success = True
+                            tool_error = None
+                            tool_errors.pop()  # Remove the previous error
+                            TOOL_EXECUTION_TOTAL.labels(tool_name=tool_name, status="success").inc()
+                        except Exception as retry_e:
+                            logger.warning("Reflection retry also failed: %s", retry_e)
+                            result = f"Error executing tool {tool_name}: {retry_e}"
+                            tool_error = str(retry_e)
+            finally:
+                TOOL_EXECUTION_DURATION_SECONDS.labels(tool_name=tool_name).observe(
+                    time.time() - tool_start
                 )
-                messages.append(tool_msg)
 
-                await self.conversation_repo.add_message(
-                    conversation_id=conv_uuid,
-                    role=MessageRole.TOOL,
-                    content=str(result),
-                    sequence_number=current_seq,
-                    tool_call_id=tool_call.id,
+            # Verification step
+            if self._should_verify_tool_result(
+                tool_name=tool_name,
+                result_text=str(result),
+                had_error=not success,
+                router_confidence=state.router_confidence,
+            ):
+                ok, reason = await self._verify_tool_result(
+                    user_input=state.user_input,
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                    result_text=str(result),
+                    model=state.model,
                 )
+                tool_metadata["verification_ok"] = ok
+                tool_metadata["verification_reason"] = reason
+                if not ok:
+                    success = False
+                    tool_errors.append(f"{tool_name}: {reason}")
+                    if not tool_error:
+                        tool_error = reason
 
+            if success:
+                successful_tool_names.append(tool_name)
+
+            try:
+                await tool_reliability_store.update(tool_name, success=success, error=tool_error)
+            except Exception as e:
+                logger.debug("Tool reliability update failed for %s: %s", tool_name, e)
+
+            state.current_seq += 1
+            tool_msg = ChatMessage(
+                role=MessageRole.TOOL, content=str(result), tool_call_id=tool_call.id
+            )
+            state.messages.append(tool_msg)
+
+            await self.conversation_repo.add_message(
+                conversation_id=state.conv_uuid,
+                role=MessageRole.TOOL,
+                content=str(result),
+                sequence_number=state.current_seq,
+                tool_call_id=tool_call.id,
+                metadata=tool_metadata,
+            )
+
+        state.successful_tool_names = successful_tool_names
+        state.tool_errors = tool_errors
+        yield NODE_SYNTHESIS
+
+    # -------------------------------------------------------------------
+    # Node: Reflection (new capability)
+    # -------------------------------------------------------------------
+    async def _node_reflection(self, state: AgentState) -> str:
+        """
+        Evaluate tool results and decide whether to retry or proceed.
+        Currently invoked by _run_graph when tool executor yields NODE_REFLECTION.
+        """
+        if state.reflection_count >= MAX_REFLECTION_RETRIES:
+            logger.warning("Node[reflection]: max retries reached, proceeding to synthesis")
+            return NODE_SYNTHESIS
+
+        # If there are errors and no successes, reflection already tried inline
+        # in the tool executor. Just proceed to synthesis.
+        if state.tool_errors and not state.successful_tool_names:
+            return NODE_SYNTHESIS
+
+        return NODE_SYNTHESIS
+
+    # -------------------------------------------------------------------
+    # Node: Synthesis (wraps existing Phase 8 logic)
+    # -------------------------------------------------------------------
+    async def _node_synthesis(self, state: AgentState):
+        """Generates final response. Yields StreamChunk objects."""
+        if state.current_tool_calls:
             # --- Phase 8: Tool Result Feedback Loop ---
             synthesis_content = ""
-            self.last_usage = None  # Reset for synthesis
-            async for chunk in self.provider.stream(
-                messages=messages,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                tools=None,
-            ):
-                synthesis_content += chunk.content
-                if chunk.usage:
-                    self.last_usage = chunk.usage
-                yield chunk
+            self.last_usage = None
+            synthesis_max_tokens = (
+                min(state.max_tokens, SIMPLE_LISTING_SYNTHESIS_MAX_TOKENS)
+                if state.simple_listing_mode
+                else state.max_tokens
+            )
+
+            if state.requires_tool_execution and not state.successful_tool_names:
+                synthesis_content = self._build_clarification_response(
+                    reason="All tool calls failed or could not be verified",
+                    tools=state.tools,
+                    tool_errors=state.tool_errors,
+                )
+                yield StreamChunk(content=synthesis_content, done=True)
+            else:
+                async for chunk in self.provider.stream(
+                    messages=state.messages,
+                    model=state.model,
+                    temperature=state.temperature,
+                    max_tokens=synthesis_max_tokens,
+                    tools=None,
+                ):
+                    synthesis_content += chunk.content
+                    if chunk.usage:
+                        self.last_usage = chunk.usage
+                    if not state.requires_tool_execution:
+                        yield chunk
+
+                if state.requires_tool_execution and self._response_contains_simulation(synthesis_content):
+                    synthesis_content = self._build_fail_closed_response(
+                        intent=state.intent,
+                        reason="Model response contained simulated/unverified language",
+                        tools=state.tools,
+                        tool_errors=state.tool_errors,
+                    )
+                if state.requires_tool_execution:
+                    yield StreamChunk(content=synthesis_content, done=True, usage=self.last_usage)
 
             # Persist synthesis
-            current_seq += 1
+            state.current_seq += 1
             msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
+                conversation_id=state.conv_uuid,
                 role=MessageRole.ASSISTANT,
                 content=synthesis_content,
-                sequence_number=current_seq,
-                metadata={"model": model, "type": "synthesis"},
+                sequence_number=state.current_seq,
+                metadata={"model": state.model, "type": "synthesis"},
                 token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
                 token_count_completion=self.last_usage.completion_tokens
                 if self.last_usage
                 else None,
-                model=model,
+                model=state.model,
             )
-            # Background embedding (Phase 3) - Disabled
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, synthesis_content))
+            asyncio.create_task(self._safe_embed(msg.id, synthesis_content))
 
         else:
-            # Persist final response
-            current_seq += 1
+            # No tool calls — persist the direct LLM response
+            state.current_seq += 1
             msg = await self.conversation_repo.add_message(
-                conversation_id=conv_uuid,
+                conversation_id=state.conv_uuid,
                 role=MessageRole.ASSISTANT,
-                content=full_content,
-                sequence_number=current_seq,
-                metadata={"model": model},
-                token_count_prompt=self.last_usage.prompt_tokens if self.last_usage else None,
-                token_count_completion=self.last_usage.completion_tokens
-                if self.last_usage
+                content=state.full_content,
+                sequence_number=state.current_seq,
+                metadata={"model": state.model},
+                token_count_prompt=state.last_usage.prompt_tokens if state.last_usage else None,
+                token_count_completion=state.last_usage.completion_tokens
+                if state.last_usage
                 else None,
-                model=model,
+                model=state.model,
             )
-            # Background embedding (Phase 3) - Disabled
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, full_content))
-
-            # Also embed user message
-            # asyncio.create_task(self._embed_user_message(conv_uuid, current_seq - 1))
-            # Background embedding (Phase 3)
-            # import asyncio
-            # asyncio.create_task(self._embed_message(msg.id, full_content))
-
-        # --- Phase 9: Background Summarization (Phase 2.7) ---
-        # Trigger if more than 20 messages have passed since last summary
-        if (current_seq - last_summarized_seq) >= 20:
-            # We should run this in background, but for now we'll await it to ensure it completes
-            # In a real async app, use asyncio.create_task() if fire-and-forget is safe
-            # For data integrity, running it here is safer (though adds latency to the FINAL chunk)
-            # Let's use asyncio.create_task to not block response?
-            # But we need to use 'await' safely.
-            # Let's await it to be safe for now, latency hit happens only every 20 turns.
-            await self._summarize_conversation(conv_uuid, current_seq, last_summarized_seq, model)
-
-        # Record total duration
-        ORCHESTRATOR_REQUEST_DURATION_SECONDS.labels(intent=intent).observe(
-            time.time() - start_time
-        )
+            asyncio.create_task(self._safe_embed(msg.id, state.full_content))
+            asyncio.create_task(self._safe_embed_user(state.conv_uuid, state.current_seq - 1))
 
     async def _summarize_conversation(
         self, conversation_id: Any, current_seq: int, last_seq: int, model: str
@@ -495,12 +1770,7 @@ class ChatOrchestrator:
 
             text_to_summarize = "\n".join([f"{m.role}: {m.content}" for m in messages_to_summarize])
 
-            summary_prompt = (
-                "Summarize the following conversation segment efficiently. "
-                "Focus on key facts, user preferences, and important decisions. "
-                "Do not lose important details.\n\n"
-                f"{text_to_summarize}"
-            )
+            summary_prompt = SUMMARIZE_PROMPT_TEMPLATE.format(text=text_to_summarize)
 
             # Call LLM for summary
             response = await self.provider.complete(
@@ -524,12 +1794,9 @@ class ChatOrchestrator:
             old_summary = current_summary_data["summary"] if current_summary_data else ""
 
             if old_summary:
-                update_prompt = (
-                    "Here is the previous conversation summary:\n"
-                    f"{old_summary}\n\n"
-                    "Here is the new conversation segment:\n"
-                    f"{new_segment_summary}\n\n"
-                    "Create a consolidated summary of the entire conversation. Keep it concise."
+                update_prompt = CONSOLIDATE_SUMMARY_PROMPT_TEMPLATE.format(
+                    old_summary=old_summary,
+                    new_summary=new_segment_summary,
                 )
                 response = await self.provider.complete(
                     messages=[ChatMessage(role=MessageRole.USER, content=update_prompt)],
@@ -548,7 +1815,11 @@ class ChatOrchestrator:
             logger.error(f"Summarization failed: {e}")
 
     async def _embed_message(self, message_id: Any, content: str):
-        """Generate and save embedding for a message in the background."""
+        """Generate and save embedding for a message."""
+        from chatbot_ai_system.config import get_settings
+        if get_settings().disable_background_embedding:
+            return
+
         try:
             embedding = await self.embedding_service.generate_embedding(content)
             if embedding:
@@ -556,6 +1827,27 @@ class ChatOrchestrator:
                 logger.info(f"Generated embedding for message {message_id}")
         except Exception as e:
             logger.error(f"Failed to generate embedding for message {message_id}: {e}")
+
+    async def _safe_embed(self, message_id: Any, content: str):
+        """Fire-and-forget wrapper for _embed_message with error isolation."""
+        try:
+            await self._embed_message(message_id, content)
+        except Exception as e:
+            logger.error(f"Background embed failed for {message_id}: {e}")
+
+    async def _safe_embed_user(self, conversation_id: UUID, sequence_number: int):
+        """Fire-and-forget wrapper for _embed_user_message."""
+        try:
+            await self._embed_user_message(conversation_id, sequence_number)
+        except Exception as e:
+            logger.error(f"Background user embed failed at seq {sequence_number}: {e}")
+
+    async def _safe_summarize(self, conversation_id: Any, current_seq: int, last_seq: int, model: str):
+        """Fire-and-forget wrapper for _summarize_conversation."""
+        try:
+            await self._summarize_conversation(conversation_id, current_seq, last_seq, model)
+        except Exception as e:
+            logger.error(f"Background summarization failed: {e}")
 
     async def _embed_user_message(self, conversation_id: UUID, sequence_number: int):
         """Find the user message by sequence number and embed it."""
@@ -573,6 +1865,9 @@ class ChatOrchestrator:
             )
             result = await self.conversation_repo.session.execute(statement)
             message = result.scalar_one_or_none()
+            if message and inspect.isawaitable(message):
+                # When tests mock the DB, it may return an unawaited coroutine.
+                message = await message
 
             if message and not message.embedding:
                 await self._embed_message(message.id, message.content)
@@ -591,15 +1886,7 @@ class ChatOrchestrator:
         classifier_messages = [
             ChatMessage(
                 role=MessageRole.SYSTEM,
-                content=(
-                    "You are an intent classifier. Analyze the user's request.\n"
-                    "Categories:\n"
-                    "1. GIT: Version control, commits, branches, diffs.\n"
-                    "2. FILESYSTEM: Reading/writing files, listing directories, searching.\n"
-                    "3. FETCH: Web requests, extracting content from URLs.\n"
-                    "4. GENERAL: General knowledge, coding advice (without file access), greetings.\n"
-                    "Output ONLY the category name (e.g., 'GIT')."
-                ),
+                content=INTENT_CLASSIFIER_PROMPT,
             ),
             ChatMessage(role=MessageRole.USER, content=user_input),
         ]
@@ -618,119 +1905,10 @@ class ChatOrchestrator:
             return "FETCH"
         return "GENERAL"
 
-    async def _filter_tools(self, intent: str, user_input: str) -> List[Dict[str, Any]]:
+
+
+    def _get_system_prompt(self, phase: str, has_tools: bool) -> str:
         """
-        Phase 5: Reduce tool scope based on intent.
-        Includes both MCP remote tools and local registered tools.
+        Get the appropriate system prompt based on phase and tool availability.
         """
-        if intent == "GENERAL":
-            return []
-
-        # Get MCP tools via registry's query-based filtering
-        all_tools = await self.registry.get_ollama_tools(query=user_input)
-
-        # Also include ALL local tools (web_search, python_sandbox, etc.)
-        # since get_ollama_tools may not include them
-        local_tools = [t.to_ollama_format() for t in self.registry._tools.values()]
-        seen_names = {t["function"]["name"] for t in all_tools}
-        for lt in local_tools:
-            if lt["function"]["name"] not in seen_names:
-                all_tools.append(lt)
-                seen_names.add(lt["function"]["name"])
-
-        filtered = []
-        for tool in all_tools:
-            name = tool["function"]["name"].lower()
-            desc = tool["function"].get("description", "").lower()
-            name_or_desc = name + " " + desc
-            if intent == "FILESYSTEM":
-                if any(
-                    x in name_or_desc
-                    for x in [
-                        "file",
-                        "dir",
-                        "list",
-                        "read",
-                        "write",
-                        "search_file",
-                        "ls",
-                        "path",
-                        "folder",
-                        "move",
-                        "copy",
-                        "create",
-                        "delete",
-                        "rename",
-                    ]
-                ):
-                    filtered.append(tool)
-            elif intent == "GIT":
-                if any(
-                    x in name_or_desc
-                    for x in [
-                        "git",
-                        "repo",
-                        "commit",
-                        "status",
-                        "branch",
-                        "diff",
-                        "log",
-                        "merge",
-                        "push",
-                        "pull",
-                        "clone",
-                        "checkout",
-                        "tag",
-                        "stash",
-                        "rebase",
-                        "reset",
-                    ]
-                ):
-                    filtered.append(tool)
-            elif intent == "FETCH":
-                if any(
-                    x in name_or_desc
-                    for x in [
-                        "fetch",
-                        "http",
-                        "url",
-                        "web",
-                        "search",
-                        "request",
-                        "download",
-                        "get",
-                        "post",
-                        "api",
-                        "browse",
-                        "navigate",
-                        "puppeteer",
-                        "duckduckgo",
-                    ]
-                ):
-                    filtered.append(tool)
-
-        logger.info(
-            f"Phase 5: _filter_tools for intent={intent}: {len(filtered)}/{len(all_tools)} tools matched (names: {[t['function']['name'] for t in filtered]})"
-        )
-        return filtered
-
-    def _get_system_prompt(self, intent: str, has_tools: bool) -> str:
-        """
-        Get the appropriate system prompt based on intent and tool availability.
-        """
-        base_prompt = "You are a helpful AI assistant."
-
-        if not has_tools:
-            return (
-                base_prompt
-                + "\nAnswer using your internal knowledge. Do not hallucinate or fabricate tool calls."
-            )
-
-        tool_instructions = (
-            "\nYou have access to external tools via MCP.\n"
-            "1. If the user's request requires it, call the appropriate tool.\n"
-            "2. Output a valid JSON tool call.\n"
-            "3. Use the tool result to answer the question."
-        )
-
-        return base_prompt + tool_instructions
+        return build_system_prompt(phase, has_tools)

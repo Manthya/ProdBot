@@ -1,5 +1,6 @@
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+from chatbot_ai_system.config.settings_manager import settings_manager
 
 
 class MCPServerConfig:
@@ -20,7 +21,16 @@ class MCPServerConfig:
         self.required_env_vars = required_env_vars or []
 
 
-def get_mcp_servers() -> List[MCPServerConfig]:
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "command": self.command,
+            "args": self.args,
+            "env_vars": self.env_vars,
+            "required_env_vars": self.required_env_vars
+        }
+
+async def get_mcp_servers() -> List[MCPServerConfig]:
     """
     Get the list of configured MCP servers.
     Checks environment variables to enable/disable servers.
@@ -197,5 +207,81 @@ def get_mcp_servers() -> List[MCPServerConfig]:
                 required_env_vars=["SENTRY_AUTH_TOKEN"],
             )
         )
+
+    # --- Personal Assistant (Phase 1) ---
+    personal_integrations = await settings_manager.get_setting("personal_integrations") or {}
+    enable_gmail = os.environ.get("ENABLE_PERSONAL_GMAIL", "false").lower() == "true"
+    enable_telegram = os.environ.get("ENABLE_PERSONAL_TELEGRAM", "false").lower() == "true"
+    enable_linkedin = os.environ.get("ENABLE_PERSONAL_LINKEDIN", "false").lower() == "true"
+
+    def _expand_path(val: str) -> str:
+        return os.path.expanduser(val) if val else val
+
+    if enable_gmail:
+        gmail_fields = (personal_integrations.get("gmail") or {}).get("fields") or {}
+        servers.append(
+            MCPServerConfig(
+                name="gmail",
+                command="npx",
+                args=["-y", "@shinzolabs/gmail-mcp"],
+                env_vars={
+                    "MCP_CONFIG_DIR": _expand_path(gmail_fields.get("MCP_CONFIG_DIR", "~/.gmail-mcp")),
+                    "AUTH_SERVER_PORT": str(gmail_fields.get("AUTH_SERVER_PORT", "3000")),
+                },
+            )
+        )
+
+    if enable_telegram:
+        telegram_fields = (personal_integrations.get("telegram") or {}).get("fields") or {}
+        servers.append(
+            MCPServerConfig(
+                name="telegram",
+                command="npx",
+                args=["-y", "@chaindead/telegram-mcp"],
+                env_vars={
+                    "TG_APP_ID": str(telegram_fields.get("TG_APP_ID", "")),
+                    "TG_API_HASH": str(telegram_fields.get("TG_API_HASH", "")),
+                },
+                required_env_vars=["TG_APP_ID", "TG_API_HASH"],
+            )
+        )
+
+    if enable_linkedin:
+        linkedin_fields = (personal_integrations.get("linkedin") or {}).get("fields") or {}
+        playwright_args = ["-y", "@playwright/mcp@latest"]
+        storage_state = _expand_path(str(linkedin_fields.get("STORAGE_STATE_PATH", "")).strip())
+        user_data_dir = _expand_path(str(linkedin_fields.get("USER_DATA_DIR", "")).strip())
+        if storage_state:
+            playwright_args.extend(["--storage-state", storage_state])
+        if user_data_dir:
+            playwright_args.extend(["--user-data-dir", user_data_dir])
+        if str(linkedin_fields.get("ISOLATED", "true")).lower() == "true":
+            playwright_args.append("--isolated")
+
+        servers.append(
+            MCPServerConfig(
+                name="linkedin",
+                command="npx",
+                args=playwright_args,
+            )
+        )
+
+    # --- User Dynamic Configs ---
+    dynamic_configs = await settings_manager.get_setting("mcp_servers")
+    if dynamic_configs and isinstance(dynamic_configs, list):
+        for cfg in dynamic_configs:
+            # Avoid duplicates if name matches built-ins
+            if any(s.name == cfg.get("name") for s in servers):
+                continue
+            
+            servers.append(
+                MCPServerConfig(
+                    name=cfg["name"],
+                    command=cfg["command"],
+                    args=cfg["args"],
+                    env_vars=cfg.get("env_vars"),
+                    required_env_vars=cfg.get("required_env_vars")
+                )
+            )
 
     return servers

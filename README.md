@@ -1,92 +1,123 @@
-# Chatbot AI System
+<div align="center">
 
-A production-grade, multi-tenant AI chatbot platform with multi-provider LLM support, multimodal input (image, audio, video), real-time voice conversation, WebSocket streaming, and modern UI.
+# 🤖 ProdBot
+
+### From Zero (Beginner) to Production AI Chatbot
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](docker-compose.yml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Async-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-black.svg)](https://ollama.ai/)
+
+**A self-hosted, production-grade AI chatbot platform that runs entirely on your machine.**
+**No API keys required. No cloud dependency. Full control.**
+
+*Multimodal input · Real-time voice · WebSocket streaming · Agentic reasoning · MCP tools · Observability*
+
+[Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#%EF%B8%8F-architecture) · [Documentation](#-learn--build-phase-by-phase) · [Tech Stack](#%EF%B8%8F-tech-stack)
+
+</div>
+
+---
+
+## Why ProdBot?
+
+Most chatbot tutorials stop at "hello world." ProdBot is a **complete, battle-tested system** — from LLM inference to database persistence, from tool orchestration to production observability.
+
+- 🏢 **Enterprise-ready** — Multi-tenant architecture, Redis caching, PostgreSQL persistence, Prometheus + Grafana monitoring
+- 🎓 **Beginner-friendly** — 10+ phases of detailed documentation guide you from core concepts to production deployment
+- 🔒 **Fully self-hosted** — Runs on Ollama with open-source models. Your data never leaves your infrastructure
+- ⚡ **Production-hardened** — Red-team tested, behavioral benchmarks, deep audit with 12 critical fixes applied
+
+> [!TIP]
+> **New to building chatbots?** Follow the [phase-by-phase documentation](#-learn--build-phase-by-phase) — each phase builds on the previous one, taking you from a simple chat loop to a fully orchestrated, multimodal AI system.
+
+---
+
+## ✨ Features
+
+- 🧠 **9-Phase Chat Orchestrator** — Intent classification, context injection, hybrid memory, tool routing, agentic reasoning, and response synthesis — all in a single pipeline
+- 🤖 **Agentic Engine** — Plan + ReAct loop with cycle detection, circuit breaker, tool retry, and safety guardrails for complex multi-step tasks
+- ⚡ **Adaptive Routing** — Trivial bypass (<1ms), fast path (~5s), tool path (~20s), and full agentic path (60s+) based on query complexity
+- 🖼️ **Multimodal Input** — Upload images, audio, and video. Auto-switches to vision model (LLaVA) for image understanding. Keyframe extraction for video
+- 🎤 **Real-Time Voice** — Full-duplex WebSocket voice conversation with Whisper STT and multi-backend TTS (piper/macOS say/espeak)
+- 🔌 **MCP Tool Ecosystem** — 15+ Model Context Protocol servers: filesystem, Git, GitHub, Brave Search, Docker, Slack, Google Maps, sequential thinking, and more
+- 🧲 **Hybrid Memory System** — Hot (sliding window), warm (summarization), and cold (pgvector semantic search) memory tiers for intelligent context management
+- 🌐 **Multi-Provider LLM** — Ollama (default), OpenAI, Anthropic, and Gemini support with runtime model switching from the UI
+- 📡 **WebSocket Streaming** — Token-by-token response streaming with real-time status indicators (thinking, tool execution, synthesis)
+- 📊 **Full Observability** — Prometheus metrics, Grafana dashboards, node exporter, health checks — production monitoring out of the box
+- 🔐 **Multi-Tenant Ready** — User isolation, conversation threading, session management, role-based access architecture
+- 🧪 **Extensively Tested** — Red-team security suite, behavioral benchmarks, trajectory evaluation, integration tests, and live pipeline audits
+
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Python 3.11+** with Poetry
-- **Node.js 20+** with npm
-- **Docker & Docker Compose** (for PostgreSQL & Redis)
-- **Ollama** (for local LLM) - [Install Ollama](https://ollama.ai/)
-- **FFmpeg** (for audio/video processing) - `brew install ffmpeg`
+| Tool | Purpose |
+|------|---------|
+| **Python 3.11+** & Poetry | Backend runtime |
+| **Node.js 20+** & npm | Frontend runtime |
+| **Docker & Docker Compose** | PostgreSQL, Redis, monitoring |
+| **Ollama** | Local LLM inference — [Install →](https://ollama.ai/) |
+| **FFmpeg** | Audio/video processing — `brew install ffmpeg` |
 
-### 1. Setup Environment
+### 1️⃣ Clone & Configure
 
 ```bash
-# Clone and navigate to project
-cd /Users/mk/Documents/chatbot-ai-systems-production
+git clone https://github.com/your-username/chatbot-ai-systems-production.git
+cd chatbot-ai-systems-production
 
-# Copy environment files
 cp .env.example .env
 cp frontend/.env.example frontend/.env.local
 ```
 
 > [!IMPORTANT]
-> **MCP Configuration**: The `.env` file includes sections for MCP server API keys.
-> You must populate these keys (e.g., `BRAVE_API_KEY`, `GITHUB_TOKEN`) to enable specific tools.
-> See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for a full guide.
+> To enable MCP tools (web search, GitHub, Slack, etc.), add your API keys to `.env`.
+> See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for the full guide.
 
-### 2. Install Ollama and Models
+### 2️⃣ Pull Models
 
 ```bash
-# Install Ollama (macOS)
-brew install ollama
-
-# Start Ollama service
-ollama serve
-
-# Pull Qwen 2.5 14B (Required for Decision Discipline)
-ollama pull qwen2.5:14b-instruct
-
-# Pull LLaVA 7B (Required for Image Understanding — Phase 5.0)
-ollama pull llava:7b
-
-# Pull Nomic embedding model (Required for Semantic Memory)
-ollama pull nomic-embed-text
+ollama serve                        # Start Ollama
+ollama pull qwen2.5:14b-instruct   # Text model
+ollama pull llava:7b                # Vision model
+ollama pull nomic-embed-text        # Embedding model
 ```
 
-### 3. Start Backend & Database
+### 3️⃣ Start Backend
 
 ```bash
-# Start PostgreSQL & Redis
-docker-compose up -d postgres redis
-
-# Install Python dependencies
-poetry install
-
-# Apply Database Migrations (First Run)
-poetry run alembic upgrade head
-
-# Start the backend server
+docker-compose up -d postgres redis          # Start databases
+poetry install                                # Install dependencies
+poetry run alembic upgrade head               # Run migrations
 poetry run uvicorn chatbot_ai_system.server.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 4. Start Frontend
+### 4️⃣ Start Frontend
 
 ```bash
-# Navigate to frontend
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-### 5. Access the Application
+### 🎉 You're Live!
 
-- **Frontend**: http://localhost:3000
-- **API Docs**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
-- **Grafana**: http://localhost:3001 (User: `admin`, Pass: `admin`)
-- **Prometheus**: http://localhost:9090
+| Service | URL |
+|---------|-----|
+| **Chat UI** | http://localhost:3000 |
+| **API Docs** | http://localhost:8000/docs |
+| **Health Check** | http://localhost:8000/health |
+| **Grafana** | http://localhost:3001 (admin/admin) |
+| **Prometheus** | http://localhost:9090 |
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
 ```mermaid
 flowchart TB
@@ -107,6 +138,7 @@ flowchart TB
     
     subgraph Core["🧠 Core Layer"]
         Orchestrator["Chat Orchestrator<br/>(9-Phase Pipeline)"]
+        AgenticEngine["Agentic Engine<br/>(Plan+ReAct + Safety)"]
         Provider["LLM Provider"]
         Registry["Tool Registry"]
         MCPClient["MCP Client Layer"]
@@ -158,6 +190,7 @@ flowchart TB
     Upload --> MediaPipe
     VoiceWS --> STT & TTS
     MediaPipe --> ImgProc & STT & VidProc
+    Orchestrator --> AgenticEngine --> Provider
     Orchestrator --> Provider
     Orchestrator --> Registry
     Orchestrator --> Redis
@@ -168,23 +201,11 @@ flowchart TB
     MediaPipe --> MediaDB
 ```
 
-### Supported MCP Servers
-
-The system supports a wide range of MCP servers, dynamically loaded based on your `.env` configuration:
-
-- **Core**: Filesystem, Time, Memory (Knowledge Graph), PostgreSQL
-- **Researcher**: Brave Search, Puppeteer, Fetch (HTTP)
-- **Developer**: Git, GitHub, Docker, E2B Interpreter
-- **Brain**: Sequential Thinking, SQLite
-- **Connector**: Slack, Google Maps, Sentry
-
-See `src/chatbot_ai_system/config/mcp_server_config.py` for dynamic loading logic.
-
 ---
 
-## ⚡ Adaptive Execution Flow (Phase 5.5)
+## ⚡ How It Works — Adaptive Execution
 
-The system employs a smart routing mechanism to optimize latency and performance based on query complexity.
+ProdBot automatically classifies every query and routes it through the optimal execution path:
 
 ```mermaid
 flowchart TD
@@ -204,145 +225,181 @@ flowchart TD
     ReAct --> LLM
 ```
 
-| Path | Complexity | Description | Typical Latency |
-| :--- | :--- | :--- | :--- |
-| **Fast Path** | `SIMPLE` | Direct LLM response for greetings, facts, and definitions. Tools are explicitly disabled to save tokens and time. | **~5-8s** |
-| **Tool Path** | `SIMPLE` | Single-step tool usage for straightforward tasks (e.g., "List files", "Read specific file"). Uses broad keyword matching. | **~20-40s** |
-| **Agentic Path** | `COMPLEX` | Full reasoning loop for multi-step tasks (e.g., "Analyze codebase", "Compare files"). Uses the Sequential Thinking planner. | **60s+** |
+| Path | When | Latency |
+| :--- | :--- | :--- |
+| **Trivial Bypass** | Greetings, acknowledgments ("hi", "thanks") — skips LLM entirely | **<1ms** |
+| **Fast Path** | Facts, definitions — direct LLM response, tools disabled | **~5-8s** |
+| **Tool Path** | Single-step tasks ("list files", "search web") — one-shot tool call | **~20-40s** |
+| **Agentic Path** | Complex reasoning — full Plan+ReAct loop with safety guardrails | **60s+** |
 
 ---
 
-## 🖼️ Multimodal Capabilities (Phase 5.0)
+## 🔌 MCP Tool Ecosystem
 
-The chatbot accepts image, audio, and video input and can hold real-time voice conversations.
+ProdBot dynamically loads [Model Context Protocol](https://modelcontextprotocol.io/) servers based on your `.env` configuration:
 
-### Image Understanding
+| Category | Tools | Env Key Required |
+|----------|-------|------------------|
+| **Core** | Filesystem, Time, Memory (Knowledge Graph), PostgreSQL | None (built-in) |
+| **Research** | Brave Search, Puppeteer, Fetch (HTTP) | `BRAVE_API_KEY` |
+| **Developer** | Git, GitHub, Docker, E2B Code Interpreter | `GITHUB_TOKEN`, `E2B_API_KEY` |
+| **Brain** | Sequential Thinking, SQLite | None (built-in) |
+| **Connectors** | Slack, Google Maps, Sentry | `SLACK_BOT_TOKEN`, `GOOGLE_MAPS_API_KEY`, `SENTRY_AUTH_TOKEN` |
 
-Upload an image via `POST /api/upload` or attach it to a chat message. The orchestrator auto-detects image attachments and switches to the **llava:7b** vision model:
+<details>
+<summary><strong>⚙️ How to Enable / Update MCP Tools</strong></summary>
 
-```bash
-# Upload and analyze an image
-curl -F "file=@photo.png" http://localhost:8000/api/upload
-```
+1. Open your `.env` file and add the API key for the tool you want to enable:
+   ```bash
+   # Example: Enable web search
+   BRAVE_API_KEY=your-brave-api-key
 
-### Voice Conversation
+   # Example: Enable GitHub integration
+   GITHUB_TOKEN=ghp_your-github-token
+   ```
+2. Restart the backend — ProdBot auto-discovers available servers on startup
+3. The tool is now available to the chatbot's orchestrator and will be used when relevant
 
-Connect via WebSocket for full-duplex voice:
+> Tools without required API keys (Filesystem, Time, Git, Sequential Thinking, SQLite) work **out of the box** with zero configuration.
 
-| Direction | Format | Content |
-|-----------|--------|---------|
-| Client → Server | Binary | 16kHz 16-bit PCM mono audio |
-| Client → Server | JSON | `{"type": "end_turn"}` |
-| Server → Client | JSON | Transcription, response text |
-| Server → Client | Binary | WAV audio response |
+See [docs/MCP_SETUP.md](docs/MCP_SETUP.md) for the complete setup guide with all available servers.
 
-### Audio & Video Processing
-
-- **Audio**: Converted to 16kHz mono WAV, transcribed via Whisper STT, transcription injected into chat context.
-- **Video**: Keyframes extracted at 5-second intervals, audio track transcribed.
-
-See [docs/phase_5.0.md](docs/phase_5.0.md) for full architecture and protocol details.
-
----
-
-## 🔌 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/api/chat` | POST | Send a chat message (REST) |
-| `/api/chat/stream` | WebSocket | Stream chat responses |
-| `/api/upload` | POST | Upload media (image/audio/video) |
-| `/api/voice/config` | GET | Voice capability info |
-| `/api/voice/stream` | WebSocket | Real-time voice conversation |
-| `/docs` | GET | Swagger UI |
-| `/metrics` | GET | Prometheus metrics |
+</details>
 
 ---
 
-## ⚙️ Configuration
+## 🛠️ Tech Stack
 
-Key environment variables (`.env`):
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | FastAPI · SQLAlchemy (async) · Pydantic · WebSockets · Alembic |
+| **LLM** | Ollama · OpenAI · Anthropic · Gemini · MCP Protocol |
+| **Multimodal** | faster-whisper (STT) · piper-tts / macOS say (TTS) · Pillow · OpenCV · LLaVA |
+| **Data** | PostgreSQL · pgvector · Redis · Hybrid 3-tier memory |
+| **Frontend** | Next.js 14 · TypeScript · Tailwind CSS |
+| **DevOps** | Docker Compose · Prometheus · Grafana · Node Exporter |
 
-```env
-# LLM Provider
-DEFAULT_LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:14b-instruct
+---
 
-# Database & Cache
-DATABASE_URL=postgresql+asyncpg://user:password@localhost/dbname
-POSTGRES_URL=postgresql://user:password@localhost/dbname
-REDIS_URL=redis://localhost:6379/0
+## 💬 Personal Assistant Mode
 
-# MCP Capabilities (Add keys to enable)
-BRAVE_API_KEY=...
-GITHUB_TOKEN=...
-SLACK_BOT_TOKEN=...
-GOOGLE_MAPS_API_KEY=...
-E2B_API_KEY=...
-SENTRY_AUTH_TOKEN=...
+ProdBot goes beyond generic chatbots — it can connect to your **personal communication platforms** and act as a context-aware assistant across your digital life.
 
-# Phase 5.0: Multimodal & Voice
-MEDIA_STORAGE_PATH=media
-MAX_UPLOAD_SIZE_MB=50
-VISION_MODEL=llava:7b
-STT_MODEL=base
-STT_DEVICE=cpu
-TTS_VOICE=en_US-lessac-medium
-```
+| Platform | Capability | How It Works |
+|----------|------------|-------------|
+| **Gmail** | Read, search, draft emails | OAuth-based via MCP server — drafts land in your Gmail Drafts folder |
+| **Telegram** | Read chats, send messages | Local MTProto client (Telethon) — your session, your machine |
+| **LinkedIn** | Read inbox messages | Headless browser automation (Playwright) |
+| **Slack** | Send messages, read channels | Official Slack Bot Token via MCP |
+| **WhatsApp** | Read/send messages | Planned — Phase 2 rollout |
+| **Line** | Read/send messages | Planned — Phase 2 rollout |
+
+**Key design principles:**
+- 🔒 **Local-first** — All credentials stay on your machine. No cloud auth, no data leaves your infrastructure
+- ✋ **Human-in-the-loop** — ProdBot *never* sends messages without your explicit approval. Every outgoing message goes through a **Draft Card** UI where you can edit, regenerate, or cancel
+- 🎛️ **Granular permissions** — Control Read / Draft / Send permissions per platform from the Plugins dashboard
+- 🔍 **On-demand retrieval** — ProdBot doesn't pre-index your messages. It searches your platforms in real-time when asked
+
+> [!TIP]
+> All personal integrations are gated behind **feature flags** (off by default). Enable them individually when ready.
+> See [docs/personal_platform_integration.md](docs/personal_platform_integration.md) for the full specification.
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# Verify MCP integration and tool execution
-python scripts/test_mcp_capabilities.py
+# Red-team security regression (no external APIs needed)
+PYTHONPATH=src .venv/bin/pytest tests/redteam -q
 
-# Verify multimodal pipeline (image, audio, TTS, vision model)
-python scripts/test_multimodal.py
+# Behavioral benchmark suite
+PYTHONPATH=src .venv/bin/python tests/evals/run_benchmarks.py
 
-# Verify performance and query routing (Phase 5.5)
-python scripts/verify_phase_5_5_real.py
+# Full pipeline integration test (requires running backend + Ollama)
+PYTHONPATH=src .venv/bin/python tests/test_all_pipelines.py
+
+# Multimodal pipeline test (requires backend + Ollama + FFmpeg)
+PYTHONPATH=src .venv/bin/python tests/test_media_pipeline.py
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## 📖 Learn & Build: Phase by Phase
 
-### Backend
-- **FastAPI** — Modern Python web framework with async support
-- **SQLAlchemy** — Async ORM with PostgreSQL
-- **Redis** — High-performance caching layer (context cache, session)
-- **Model Context Protocol (MCP)** — Standard for connecting LLMs to external tools
-- **Ollama** — Local LLM inference (text, vision, embedding)
-- **Pydantic** — Data validation and settings management
-- **WebSockets** — Real-time streaming for chat and voice
+> [!TIP]
+> **New here?** ProdBot was built incrementally across 20+ phases — each with detailed documentation explaining *what* was built, *why* it was designed that way, and *how* it works under the hood. Start from Phase 1 and build your understanding of production AI systems step by step.
 
-### Multimodal & Voice
-- **faster-whisper** — Speech-to-text (Whisper reimplementation, int8 quantized)
-- **Pillow** — Image processing (resize, format conversion, base64 encoding)
-- **pydub + FFmpeg** — Audio format conversion (any format → 16kHz WAV)
-- **OpenCV** — Video keyframe extraction
-- **piper-tts / macOS say / espeak** — Text-to-speech (auto-detected backend)
-- **llava:7b** — Vision model for image understanding
+<details>
+<summary><strong>📚 Click to expand full Phase Documentation</strong></summary>
 
-### Data & Memory
-- **PostgreSQL** — Persistent storage with pgvector for semantic search
-- **pgvector** — Vector embeddings for cold memory / RAG
-- **Alembic** — Database migrations
+| Phase | What You'll Learn | Docs |
+|-------|-------------------|------|
+| **1.0** | Core chatbot with open-source LLM | — |
+| **1.1** | MCP tool support & streaming execution | [Phase 1.1](docs/phase_1.1.md) |
+| **1.2** | Decision discipline — smart routing & planning | [Phase 1.2](docs/phase_1.2.md) |
+| **1.3** | Chat orchestrator — 9-phase architecture | [Phase 1.3](docs/phase_1.3.md) |
+| **2.0** | Data persistence & user memory (PostgreSQL) | [Phase 2.0](docs/phase_2.0.md) |
+| **2.2** | Embedding & semantic search (pgvector) | [Phase 2.2](docs/phase_2.2.md) |
+| **2.5** | Observability & schema scaling | [Phase 2.5](docs/phase_2.5.md) |
+| **2.6–2.7** | Sliding window (hot memory) & summarization (warm memory) | — |
+| **3.0** | Redis caching & performance optimization | [Phase 3.0](docs/phase_3.0.md) |
+| **4.0–4.1** | Prometheus & Grafana observability (setup + hardening) | [Phase 4.0](docs/phase_4.0.md) · [4.1](docs/phase_4.1.md) |
+| **5.0** | Multimodal input & voice conversation | [Phase 5.0](docs/phase_5.0.md) |
+| **5.5** | Performance optimization & adaptive routing | [Phase 5.5](docs/phase_5.5.md) |
+| **6.0** | Multi-provider LLM orchestration (OpenAI, Anthropic, Gemini) | [Phase 6.0](docs/phase_6.0.md) |
+| **6.5** | Free tool integration (web search & coding) | [Phase 6.5](docs/phase_6.5.md) |
+| **7.0–7.1** | System hardening — deep audit & 12 critical fixes | [Phase 7.0](docs/phase_7.0.md) · [7.1](docs/phase_7.1.md) |
+| **8.0–8.1** | Red-team testing & behavioral benchmarks | [Phase 8.0](docs/phase8.0_testing.md) |
+| **9.0** | Personal platform integration (Gmail/Telegram/LinkedIn) | [Phase 9.0](docs/phase9.0.md) |
+| **9.1** | Stabilization & functional evaluation | [Testing](docs/phase8.0_testing.md) |
+| **10.0** | Orchestrator & routing reliability upgrade | [Phase 10.0](docs/phase10.0.md) |
+| **10.1** | State-machine graph engine & multi-agent handoff | [Phase 10.1](docs/phase_10.1.md) |
 
-### DevOps & Observability
-- **Docker Compose** — Orchestration (PostgreSQL, Redis, Prometheus, Grafana)
-- **Prometheus** — Metrics collection & alerting
-- **Grafana** — Visualization & dashboards (port 3001)
-- **Node Exporter** — System-level metrics (CPU, memory)
+</details>
 
-### Frontend
-- **Next.js 14** — React framework
-- **TypeScript** — Type safety
-- **Tailwind CSS** — Styling
+---
+
+## 🗺️ Roadmap
+
+### ✅ What's Built (Infrastructure Complete)
+
+- [x] Core chat engine with open-source LLM (Ollama)
+- [x] 9-phase chat orchestrator with intent classification & context injection — [Phase 1.3](docs/phase_1.3.md)
+- [x] MCP tool support & streaming execution — [Phase 1.1](docs/phase_1.1.md)
+- [x] Decision discipline — smart routing & planning — [Phase 1.2](docs/phase_1.2.md)
+- [x] Agentic engine — Plan + ReAct loop with cycle detection & circuit breaker — [Phase 5.5](docs/phase_5.5.md)
+- [x] Adaptive routing — trivial, fast, tool, and agentic execution paths — [Phase 5.5](docs/phase_5.5.md)
+- [x] Data persistence & user memory (PostgreSQL) — [Phase 2.0](docs/phase_2.0.md)
+- [x] Embedding & semantic search (pgvector) — [Phase 2.2](docs/phase_2.2.md)
+- [x] Hybrid 3-tier memory — hot (sliding window), warm (summarization), cold (pgvector) — [Phase 2.5](docs/phase_2.5.md)
+- [x] Redis caching layer for context, sessions, and tool reliability scores — [Phase 3.0](docs/phase_3.0.md)
+- [x] Full observability — Prometheus, Grafana dashboards, health checks — [Phase 4.0](docs/phase_4.0.md) · [Phase 4.1](docs/phase_4.1.md)
+- [x] Multimodal input — image (LLaVA), audio (Whisper), video (OpenCV keyframes) — [Phase 5.0](docs/phase_5.0.md)
+- [x] Real-time voice conversation — full-duplex WebSocket with STT + TTS — [Phase 5.0](docs/phase_5.0.md)
+- [x] Multi-provider LLM — Ollama, OpenAI, Anthropic, Gemini with runtime switching — [Phase 6.0](docs/phase_6.0.md)
+- [x] Free tool integration — web search & code interpreter — [Phase 6.5](docs/phase_6.5.md)
+- [x] 15+ MCP tool servers — filesystem, Git, GitHub, web search, Docker, Slack, and more — [MCP Setup](docs/MCP_SETUP.md)
+- [x] Production hardening — deep audit, 12 critical fixes, red-team tested — [Phase 7.0](docs/phase_7.0.md) · [Phase 7.1](docs/phase_7.1.md)
+- [x] Behavioral evaluation — benchmark suite with trajectory tracking — [Phase 8.0](docs/phase8.0_testing.md)
+- [x] Personal platform integration — Gmail, Telegram, LinkedIn (local-first, human-in-the-loop) — [Phase 9.0](docs/phase9.0.md)
+- [x] Orchestrator & routing reliability upgrade — deterministic routing, tool reliability ranking — [Phase 10.0](docs/phase10.0.md)
+- [x] Graph-based state-machine orchestrator with multi-agent handoff — [Phase 10.1](docs/phase_10.1.md)
+- [x] Redis checkpointing for crash-resilient execution — [Phase 10.1](docs/phase_10.1.md)
+- [x] Reflection engine — automatic LLM self-correction on tool failures — [Phase 10.1](docs/phase_10.1.md)
+
+### 🔮 What's Next (Production Readiness for Real-World Traffic)
+
+- [ ] **Authentication & Multi-Tenancy** — JWT/OAuth2 auth, user isolation, org-level RBAC, session token rotation
+- [ ] **Infrastructure as Code (Terraform)** — Reproducible cloud provisioning (AWS/GCP), environment parity (dev/staging/prod), Git-managed infra with automated plan/apply
+- [ ] **Container Orchestration (Kubernetes)** — Helm charts, horizontal pod autoscaling, rolling updates, production k8s manifests with resource limits & liveness probes
+- [ ] **Message Queue & Async Processing** — RabbitMQ/Kafka/SQS for decoupled request handling, background task workers, retry queues with dead-letter handling for high-throughput traffic
+- [ ] **Rate Limiting & Throttling** — Per-user and per-endpoint rate limits, token bucket / sliding window algorithms, LLM API quota management with exponential backoff
+- [ ] **Load Balancing & Auto-Scaling** — L7 load balancing with health-check routing, model-aware request distribution, geo-distributed deployment for latency reduction
+- [ ] **Advanced Circuit Breaker & Fault Tolerance** — Service-level circuit breakers (closed/open/half-open) for LLM providers and MCP tools, cascading failure prevention, graceful degradation under partial outages
+- [ ] **CI/CD Pipeline** — Automated test gates (unit → red-team → behavioral), blue-green / canary deployments, zero-downtime release strategy
+- [ ] **Secrets Management & Security Hardening** — Vault/AWS SSM for credential rotation, network segmentation, container image scanning, OWASP compliance audit
+- [ ] **Chaos Engineering & Load Testing** — Synthetic traffic generation (Locust/k6), fault injection testing, latency/throughput benchmarks under realistic concurrent load
+- [ ] **Cost Optimization & Token Budget Control** — Per-request cost tracking, smart model routing (route simple queries to cheaper/smaller models), token consumption dashboards and alerting
 
 ---
 
@@ -353,45 +410,34 @@ chatbot-ai-systems-production/
 ├── src/chatbot_ai_system/
 │   ├── config/              # Settings, MCP server config
 │   ├── database/            # SQLAlchemy models, session, Redis
-│   ├── models/              # Pydantic schemas (ChatMessage, MediaAttachment)
+│   ├── models/              # Pydantic schemas
 │   ├── observability/       # Prometheus metrics
 │   ├── orchestrator.py      # 9-phase chat orchestrator
-│   ├── providers/           # LLM providers (Ollama, OpenAI, Anthropic)
+│   ├── providers/           # LLM providers (Ollama, OpenAI, Anthropic, Gemini)
 │   ├── repositories/        # DB repositories (conversation, memory)
-│   ├── server/              # FastAPI routes, multimodal routes
+│   ├── server/              # FastAPI routes, media routes, voice routes
 │   ├── services/            # Media pipeline, STT, TTS, embedding
 │   └── tools/               # MCP tool registry and client
-├── frontend/                # Next.js frontend
-├── alembic/                 # Database migrations
+├── frontend/                # Next.js 14 frontend
+├── tests/                   # Red-team, evals, integration, pipeline tests
+├── docs/                    # Phase-by-phase documentation
 ├── docker/                  # Prometheus, Grafana config
-├── scripts/                 # Test and utility scripts
-└── docs/                    # Phase documentation
+├── alembic/                 # Database migrations
+└── scripts/                 # Utility scripts
 ```
 
 ---
 
-## 📈 Roadmap
+<div align="center">
 
-- [x] **Phase 1.0**: Core Chatbot with Open Source LLM
-- [x] **Phase 1.1**: MCP Tool Support & Streaming Execution — [Docs](docs/phase_1.1.md)
-- [x] **Phase 1.2**: Decision Discipline (Smart Routing & Planning) — [Docs](docs/phase_1.2.md)
-- [x] **Phase 1.3**: Chat Orchestrator (9-Phase Architecture) — [Docs](docs/phase_1.3.md)
-- [x] **Phase 2.0**: Data Persistence & User Memory (PostgreSQL) — [Docs](docs/phase_2.0.md)
-- [x] **Phase 2.2**: Embedding & Semantic Search — [Docs](docs/phase_2.2.md)
-- [x] **Phase 2.5**: Observability & Schema Scaling — [Docs](docs/phase_2.5.md)
-- [x] **Phase 2.6**: Sliding Window Context (Hot Memory)
-- [x] **Phase 2.7**: Conversation Summarization (Warm Memory)
-- [x] **Phase 3.0**: Redis Caching & Performance Optimization — [Docs](docs/phase_3.0.md)
-- [x] **Phase 4.0**: Observability (Prometheus & Grafana) — [Docs](docs/phase_4.0.md)
-- [x] **Phase 4.1**: Observability Hardening & Validation — [Docs](docs/phase_4.1.md)
-- [x] **Phase 5.0**: Multimodal Input & Voice Conversation — [Docs](docs/phase_5.0.md)
-- [x] **Phase 5.5**: Performance Optimization & Reliability — [Docs](docs/phase_5.5.md)
-- [x] **Phase 6.0**: Multi-Provider Orchestration (OpenAI, Anthropic, Gemini) — [Docs](docs/phase_6.0.md)
-- [x] **Phase 6.5**: Free Tool Integration (Web Search & Coding) — [Docs](docs/phase_6.5.md)
-- [ ] **Phase 7.0**: Authentication & Multi-Tenancy
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to open issues and submit pull requests.
+
+**License**: [MIT](LICENSE)
 
 ---
 
-## 📝 License
+*Built with ❤️ — from first commit to production*
 
-MIT License
+</div>

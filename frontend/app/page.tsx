@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatArea, Message } from '@/components/ChatArea'
 import { InputBar } from '@/components/InputBar'
+import { PluginsDashboard } from '@/components/PluginsDashboard'
 import { useVoice } from '@/hooks/useVoice'
 import { useUpload, UploadResult } from '@/hooks/useUpload'
 import { Loader2 } from 'lucide-react'
@@ -25,6 +26,7 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(false)
     const [statusMessage, setStatusMessage] = useState<string>('')
     const [pendingAttachments, setPendingAttachments] = useState<UploadResult[]>([])
+    const [activeTab, setActiveTab] = useState<'chats' | 'plugins'>('chats')
 
     // Hooks
     const { uploadFile, isUploading } = useUpload()
@@ -42,6 +44,8 @@ export default function Home() {
     // WebSocket for Chat Streaming (Text Mode)
     const wsRef = useRef<WebSocket | null>(null)
     const fullContentRef = useRef('')
+    // Fix 3.1: Request correlation counter
+    const requestIdRef = useRef(0)
 
     // Fetch Conversations
     const fetchConversations = useCallback(async () => {
@@ -68,6 +72,7 @@ export default function Home() {
                 const data = await res.json()
                 setMessages(data) // Backend returns array of messages
                 setConversationId(id)
+                setActiveTab('chats')
             }
         } catch (err) {
             console.error('Failed to load conversation', err)
@@ -99,6 +104,15 @@ export default function Home() {
         setIsLoading(true)
         setStatusMessage('Thinking...')
 
+        // Fix 3.1: Generate unique request ID for correlation
+        const currentRequestId = ++requestIdRef.current
+
+        // Fix 1.1: Abort any in-flight stream before starting new one
+        if (wsRef.current && wsRef.current.onmessage) {
+            wsRef.current.onmessage = null  // Detach old handler
+        }
+        fullContentRef.current = ''  // Reset accumulator
+
         // Optimistic update
         const userMsg: Message = { role: 'user', content }
         setMessages(prev => [...prev, userMsg])
@@ -122,7 +136,8 @@ export default function Home() {
                     }))
                 }],
                 conversation_id: conversationId,
-                model: undefined // Let backend use default setting
+                model: undefined, // Let backend use default setting
+                request_id: currentRequestId, // Fix 3.1: Request correlation
             }
 
             wsRef.current?.send(JSON.stringify(payload))
@@ -135,7 +150,10 @@ export default function Home() {
                 wsRef.current.onmessage = (event) => {
                     const data = JSON.parse(event.data)
 
-                    // Handle Status Updates
+                    // Fix 3.1: Ignore chunks from stale/old requests
+                    if (data.request_id !== undefined && data.request_id !== currentRequestId) {
+                        return
+                    }
                     if (data.status) {
                         setStatusMessage(data.status)
                     }
@@ -158,21 +176,21 @@ export default function Home() {
                     }
 
                     if (data.content) {
-                        fullContentRef.current += data.content
+                        const newContent = (fullContentRef.current += data.content)
                         // Update last message (streaming)
                         setMessages(prev => {
                             const last = prev[prev.length - 1]
 
                             // If last message acts as a tool carrier, start a new text bubble
                             if (last && last.role === 'assistant' && last.tool_calls && last.tool_calls.length > 0) {
-                                return [...prev, { role: 'assistant', content: fullContentRef.current }]
+                                return [...prev, { role: 'assistant', content: newContent }]
                             }
 
                             // Normal streaming (append to last)
                             if (last && last.role === 'assistant') {
-                                return [...prev.slice(0, -1), { ...last, content: fullContentRef.current }]
+                                return [...prev.slice(0, -1), { ...last, content: newContent }]
                             } else {
-                                return [...prev, { role: 'assistant', content: fullContentRef.current }]
+                                return [...prev, { role: 'assistant', content: newContent }]
                             }
                         })
                     }
@@ -200,6 +218,36 @@ export default function Home() {
         }
     }
 
+    const sendDraft = async (toolCall: any, updatedArgs: Record<string, any>) => {
+        if (!conversationId) return
+        try {
+            setStatusMessage('Sending...')
+            const res = await fetch(`${API_URL}/api/personal/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    tool_name: toolCall.function.name,
+                    arguments: updatedArgs,
+                }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data?.detail || 'Send failed')
+            }
+            setMessages(prev => [
+                ...prev,
+                { role: 'tool', content: String(data.result) },
+                { role: 'assistant', content: `Sent via ${toolCall.function.name}.` },
+            ])
+        } catch (err) {
+            console.error(err)
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to send message.' }])
+        } finally {
+            setStatusMessage('')
+        }
+    }
+
     const handleUpload = async (file: File) => {
         const result = await uploadFile(file)
         if (result) {
@@ -219,29 +267,43 @@ export default function Home() {
                 conversations={conversations}
                 currentId={conversationId || ''}
                 onSelect={loadConversation}
-                onNew={startNewChat}
+                onNew={() => { startNewChat(); setActiveTab('chats'); }}
                 onDelete={deleteConversation}
+                onPluginsClick={() => setActiveTab('plugins')}
+                onChatsClick={() => setActiveTab('chats')}
+                activeTab={activeTab}
             />
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 relative">
-                <ChatArea messages={messages} isLoading={isLoading} statusMessage={statusMessage} />
+                {activeTab === 'chats' ? (
+                    <>
+                        <ChatArea
+                            messages={messages}
+                            isLoading={isLoading}
+                            statusMessage={statusMessage}
+                            onSendDraft={sendDraft}
+                        />
 
-                {/* Input Area */}
-                <div className="p-4 bg-transparent">
-                    {pendingAttachments.length > 0 && (
-                        <div className="text-xs text-brand-pink mb-2 px-4 font-bold">
-                            {pendingAttachments.length} file(s) attached
+                        {/* Input Area */}
+                        <div className="p-4 bg-transparent">
+                            {pendingAttachments.length > 0 && (
+                                <div className="text-xs text-brand-pink mb-2 px-4 font-bold">
+                                    {pendingAttachments.length} file(s) attached
+                                </div>
+                            )}
+                            <InputBar
+                                onSend={sendMessage}
+                                onUpload={handleUpload}
+                                onVoiceToggle={toggleVoice}
+                                isRecording={isRecording}
+                                isLoading={isLoading || isUploading}
+                            />
                         </div>
-                    )}
-                    <InputBar
-                        onSend={sendMessage}
-                        onUpload={handleUpload}
-                        onVoiceToggle={toggleVoice}
-                        isRecording={isRecording}
-                        isLoading={isLoading || isUploading}
-                    />
-                </div>
+                    </>
+                ) : (
+                    <PluginsDashboard />
+                )}
             </div>
         </div>
     )
