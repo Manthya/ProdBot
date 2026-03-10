@@ -2,7 +2,7 @@
 
 # 🤖 ProdBot
 
-### From Zero to Production AI Chatbot
+### From Zero (Beginner) to Production AI Chatbot
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
@@ -364,35 +364,42 @@ PYTHONPATH=src .venv/bin/python tests/test_media_pipeline.py
 ### ✅ What's Built (Infrastructure Complete)
 
 - [x] Core chat engine with open-source LLM (Ollama)
-- [x] 9-phase chat orchestrator with intent classification & context injection
-- [x] Agentic engine — Plan + ReAct loop with cycle detection & circuit breaker
-- [x] Adaptive routing — trivial, fast, tool, and agentic execution paths
-- [x] Multimodal input — image (LLaVA), audio (Whisper), video (OpenCV keyframes)
-- [x] Real-time voice conversation — full-duplex WebSocket with STT + TTS
-- [x] 15+ MCP tool servers — filesystem, Git, GitHub, web search, Docker, Slack, and more
-- [x] Hybrid 3-tier memory — hot (sliding window), warm (summarization), cold (pgvector)
-- [x] Multi-provider LLM — Ollama, OpenAI, Anthropic, Gemini with runtime switching
-- [x] PostgreSQL persistence with pgvector for semantic search
-- [x] Redis caching layer for context, sessions, and tool reliability scores
-- [x] Full observability — Prometheus, Grafana dashboards, health checks
-- [x] Production hardening — deep audit, 12 critical fixes, red-team tested
-- [x] Behavioral evaluation — benchmark suite with trajectory tracking
-- [x] Personal platform integration — Gmail, Telegram, LinkedIn (local-first, human-in-the-loop)
-- [x] Graph-based state-machine orchestrator with multi-agent handoff
-- [x] Redis checkpointing for crash-resilient execution
-- [x] Tool reliability tracking with EMA scoring
-- [x] Reflection engine — automatic LLM self-correction on tool failures
+- [x] 9-phase chat orchestrator with intent classification & context injection — [Phase 1.3](docs/phase_1.3.md)
+- [x] MCP tool support & streaming execution — [Phase 1.1](docs/phase_1.1.md)
+- [x] Decision discipline — smart routing & planning — [Phase 1.2](docs/phase_1.2.md)
+- [x] Agentic engine — Plan + ReAct loop with cycle detection & circuit breaker — [Phase 5.5](docs/phase_5.5.md)
+- [x] Adaptive routing — trivial, fast, tool, and agentic execution paths — [Phase 5.5](docs/phase_5.5.md)
+- [x] Data persistence & user memory (PostgreSQL) — [Phase 2.0](docs/phase_2.0.md)
+- [x] Embedding & semantic search (pgvector) — [Phase 2.2](docs/phase_2.2.md)
+- [x] Hybrid 3-tier memory — hot (sliding window), warm (summarization), cold (pgvector) — [Phase 2.5](docs/phase_2.5.md)
+- [x] Redis caching layer for context, sessions, and tool reliability scores — [Phase 3.0](docs/phase_3.0.md)
+- [x] Full observability — Prometheus, Grafana dashboards, health checks — [Phase 4.0](docs/phase_4.0.md) · [Phase 4.1](docs/phase_4.1.md)
+- [x] Multimodal input — image (LLaVA), audio (Whisper), video (OpenCV keyframes) — [Phase 5.0](docs/phase_5.0.md)
+- [x] Real-time voice conversation — full-duplex WebSocket with STT + TTS — [Phase 5.0](docs/phase_5.0.md)
+- [x] Multi-provider LLM — Ollama, OpenAI, Anthropic, Gemini with runtime switching — [Phase 6.0](docs/phase_6.0.md)
+- [x] Free tool integration — web search & code interpreter — [Phase 6.5](docs/phase_6.5.md)
+- [x] 15+ MCP tool servers — filesystem, Git, GitHub, web search, Docker, Slack, and more — [MCP Setup](docs/MCP_SETUP.md)
+- [x] Production hardening — deep audit, 12 critical fixes, red-team tested — [Phase 7.0](docs/phase_7.0.md) · [Phase 7.1](docs/phase_7.1.md)
+- [x] Behavioral evaluation — benchmark suite with trajectory tracking — [Phase 8.0](docs/phase8.0_testing.md)
+- [x] Personal platform integration — Gmail, Telegram, LinkedIn (local-first, human-in-the-loop) — [Phase 9.0](docs/phase9.0.md)
+- [x] Orchestrator & routing reliability upgrade — deterministic routing, tool reliability ranking — [Phase 10.0](docs/phase10.0.md)
+- [x] Graph-based state-machine orchestrator with multi-agent handoff — [Phase 10.1](docs/phase_10.1.md)
+- [x] Redis checkpointing for crash-resilient execution — [Phase 10.1](docs/phase_10.1.md)
+- [x] Reflection engine — automatic LLM self-correction on tool failures — [Phase 10.1](docs/phase_10.1.md)
 
-### 🔮 What's Next (Production Readiness)
+### 🔮 What's Next (Production Readiness for Real-World Traffic)
 
-- [ ] **Authentication & Multi-Tenancy** — JWT auth, user isolation, org-level access control
-- [ ] **WhatsApp & Line Integration** — Expand personal assistant to Phase 2 platforms
-- [ ] **Cross-Platform Contacts & Calendar** — Unified identity resolution across platforms
-- [ ] **Multi-Agent Parallel Execution** — Run multiple agents concurrently for complex tasks
-- [ ] **RAG Pipeline Enhancement** — Document ingestion, chunking strategies, retrieval tuning
-- [ ] **Kubernetes Deployment** — Helm charts, horizontal scaling, production k8s manifests
-- [ ] **CI/CD Pipeline** — Automated testing, linting, and deployment on push
-- [ ] **Admin Dashboard** — User management, usage analytics, system health overview
+- [ ] **Authentication & Multi-Tenancy** — JWT/OAuth2 auth, user isolation, org-level RBAC, session token rotation
+- [ ] **Infrastructure as Code (Terraform)** — Reproducible cloud provisioning (AWS/GCP), environment parity (dev/staging/prod), Git-managed infra with automated plan/apply
+- [ ] **Container Orchestration (Kubernetes)** — Helm charts, horizontal pod autoscaling, rolling updates, production k8s manifests with resource limits & liveness probes
+- [ ] **Message Queue & Async Processing** — RabbitMQ/Kafka/SQS for decoupled request handling, background task workers, retry queues with dead-letter handling for high-throughput traffic
+- [ ] **Rate Limiting & Throttling** — Per-user and per-endpoint rate limits, token bucket / sliding window algorithms, LLM API quota management with exponential backoff
+- [ ] **Load Balancing & Auto-Scaling** — L7 load balancing with health-check routing, model-aware request distribution, geo-distributed deployment for latency reduction
+- [ ] **Advanced Circuit Breaker & Fault Tolerance** — Service-level circuit breakers (closed/open/half-open) for LLM providers and MCP tools, cascading failure prevention, graceful degradation under partial outages
+- [ ] **CI/CD Pipeline** — Automated test gates (unit → red-team → behavioral), blue-green / canary deployments, zero-downtime release strategy
+- [ ] **Secrets Management & Security Hardening** — Vault/AWS SSM for credential rotation, network segmentation, container image scanning, OWASP compliance audit
+- [ ] **Chaos Engineering & Load Testing** — Synthetic traffic generation (Locust/k6), fault injection testing, latency/throughput benchmarks under realistic concurrent load
+- [ ] **Cost Optimization & Token Budget Control** — Per-request cost tracking, smart model routing (route simple queries to cheaper/smaller models), token consumption dashboards and alerting
 
 ---
 
