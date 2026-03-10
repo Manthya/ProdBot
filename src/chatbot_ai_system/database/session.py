@@ -5,7 +5,10 @@ from chatbot_ai_system.config import get_settings
 settings = get_settings()
 
 # Use asyncpg driver
-DATABASE_URL = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+if getattr(settings, "database_url", None):
+    DATABASE_URL = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+else:
+    raise RuntimeError("DATABASE_URL is not set in settings.")
 
 engine = create_async_engine(DATABASE_URL, echo=settings.debug)
 AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
